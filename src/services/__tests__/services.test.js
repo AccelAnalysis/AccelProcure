@@ -55,22 +55,22 @@ describe('service smoke tests', () => {
     );
   });
 
-  test('aiService generateProposal posts to /ai/proposals', async () => {
+  test('aiService generateProposal posts to /ai/proposal', async () => {
     global.fetch.mockResolvedValueOnce(mockFetchResponse({ proposal: 'text' }));
     await generateProposal('rfx-123');
 
     expect(global.fetch).toHaveBeenCalledWith(
-      'http://localhost:3000/api/ai/proposals',
+      'http://localhost:3000/api/ai/proposal',
       expect.objectContaining({ method: 'POST' })
     );
   });
 
-  test('mapService getMapLayers reads /map/layers', async () => {
+  test('mapService getMapLayers reads /map', async () => {
     global.fetch.mockResolvedValueOnce(mockFetchResponse({ features: [] }));
     await getMapLayers({ status: 'open' });
 
     const [url] = global.fetch.mock.calls[0];
-    expect(url).toContain('/map/layers');
+    expect(url).toContain('/map');
     expect(url).toContain('status=open');
   });
 

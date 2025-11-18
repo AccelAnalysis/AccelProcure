@@ -11,12 +11,7 @@ export const updateProfile = (updates = {}) => {
   return httpClient.put(`${PROFILE_BASE}/me`, updates);
 };
 
-export const enrichProfile = (profileId, options = {}) => {
-  if (!profileId) {
-    throw new Error('Profile ID is required');
-  }
-  return httpClient.post(`${PROFILE_BASE}/${profileId}/enrich`, options);
-};
+export const enrichProfile = (options = {}) => httpClient.post(`${PROFILE_BASE}/enrich`, options);
 
 export const profileService = {
   getProfile,

@@ -6,21 +6,21 @@ export const generateProposal = (rfxId, context = {}) => {
   if (!rfxId) {
     throw new Error('RFX ID is required');
   }
-  return httpClient.post(`${AI_BASE}/proposals`, { rfxId, ...context });
+  return httpClient.post(`${AI_BASE}/proposal`, { rfxId, ...context });
 };
 
 export const generateResponse = (rfxId, vendorContext = {}) => {
   if (!rfxId) {
     throw new Error('RFX ID is required');
   }
-  return httpClient.post(`${AI_BASE}/responses`, { rfxId, ...vendorContext });
+  return httpClient.post(`${AI_BASE}/response`, { rfxId, ...vendorContext });
 };
 
 export const suggestMatches = (rfxId, filters = {}) => {
   if (!rfxId) {
     throw new Error('RFX ID is required');
   }
-  return httpClient.get(`${AI_BASE}/matches`, { params: { rfxId, ...filters } });
+  return httpClient.post(`${AI_BASE}/matches`, { rfxId, ...filters });
 };
 
 export const getRfxAnalysis = (rfxId) => {
