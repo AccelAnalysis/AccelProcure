@@ -1,40 +1,58 @@
 import express from 'express';
 import dotenv from 'dotenv';
-import cors from 'cors';
+import crypto from 'crypto';
+import authRoutes from './routes/authRoutes.js';
+import profileRoutes from './routes/profileRoutes.js';
+import rfxRoutes from './routes/rfxRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
+import mapRoutes from './routes/mapRoutes.js';
+import { cors } from './middleware/cors.js';
+import { cookieParser } from './middleware/cookieParser.js';
+import { rateLimit } from './middleware/rateLimit.js';
+import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
 
-// Load environment variables
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 app.use(cors());
-app.use(express.json());
+app.use(rateLimit({ keyPrefix: 'global', windowMs: 60 * 1000, max: 120 }));
 
-// Health check endpoint
+app.use((req, res, next) => {
+  const requestId = crypto.randomUUID();
+  req.requestId = requestId;
+  res.setHeader('X-Request-Id', requestId);
+  res.setHeader('X-Powered-By', 'AccelProcure API');
+  next();
+});
+
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     status: 'ok',
-    message: 'Server is running',
+    uptime: process.uptime(),
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    version: process.env.npm_package_version || 'dev',
+    requestId: req.requestId,
   });
 });
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
-    status: 'error',
-    message: 'Internal Server Error',
-    error: process.env.NODE_ENV === 'development' ? err.message : {}
-  });
-});
+app.use('/api/auth', authRoutes);
+app.use('/api/profiles', profileRoutes);
+app.use('/api/rfx', rfxRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/map', mapRoutes);
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+app.use(notFoundHandler);
+app.use(errorHandler);
+
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`AccelProcure API listening on port ${PORT}`);
+  });
+}
 
 export default app;

@@ -1,46 +1,62 @@
-import { signUp } from '../../config/auth.config';
+import { getSupabaseClient } from '../utils/supabaseClient.js';
+import { getFirebaseAdminApp } from '../utils/firebaseAdmin.js';
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+const normalizeUser = (user, provider = 'supabase') => ({
+  id: user.id,
+  email: user.email,
+  provider,
+  role: user.role || user.app_metadata?.role || 'user',
+  metadata: user.user_metadata || user.app_metadata || {},
+});
 
-  const { email, password, firstName, lastName, company } = req.body;
+export const registerHandler = async (req, res) => {
+  const { email, password, firstName, lastName, company, provider = 'supabase' } = req.body;
 
-  if (!email || !password || !firstName || !lastName) {
-    return res.status(400).json({ 
-      error: 'Email, password, first name, and last name are required' 
-    });
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required' });
   }
 
   try {
-    const { data, error } = await signUp(email, password, {
-      first_name: firstName,
-      last_name: lastName,
-      company: company || '',
-      credits: 10, // Initial signup bonus
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+    if (provider === 'firebase') {
+      const firebaseAdmin = await getFirebaseAdminApp();
+      if (!firebaseAdmin) {
+        return res.status(500).json({ error: 'Firebase admin SDK is not configured' });
+      }
+
+      const user = await firebaseAdmin.auth().createUser({
+        email,
+        password,
+        displayName: [firstName, lastName].filter(Boolean).join(' '),
+      });
+
+      return res.status(201).json({ user: normalizeUser(user, 'firebase') });
+    }
+
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+          company,
+        },
+      },
     });
 
     if (error) {
-      console.error('Registration error:', error.message);
-      return res.status(400).json({ 
-        error: error.message || 'Registration failed' 
-      });
+      return res.status(400).json({ error: error.message });
     }
 
-    // In a real app, you might want to send a welcome email here
-    
-    return res.status(201).json({ 
-      message: 'Registration successful! Please check your email to verify your account.',
-      user: data.user
+    return res.status(201).json({
+      user: normalizeUser(data.user),
+      confirmationSent: true,
     });
-
   } catch (error) {
     console.error('Registration error:', error);
-    return res.status(500).json({ 
-      error: 'An unexpected error occurred during registration' 
-    });
+    return res.status(500).json({ error: 'Unable to register user at this time' });
   }
-}
+};
+
+export default registerHandler;

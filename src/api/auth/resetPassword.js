@@ -1,59 +1,44 @@
-import { resetPassword, updatePassword } from '../../config/auth.config';
+import { getSupabaseClient } from '../utils/supabaseClient.js';
+import { getFirebaseAdminApp } from '../utils/firebaseAdmin.js';
 
-// Request a password reset email
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+export const resetPasswordHandler = async (req, res) => {
+  const { email, provider = 'supabase', redirectTo } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required' });
   }
 
-  const { email, token, newPassword } = req.body;
-
-  // Handle password reset request (send email with reset link)
-  if (email && !token && !newPassword) {
-    try {
-      const { error } = await resetPassword(email);
-      
-      if (error) {
-        console.error('Password reset request error:', error.message);
-        return res.status(400).json({ 
-          error: error.message || 'Failed to send password reset email' 
-        });
+  try {
+    if (provider === 'firebase') {
+      const firebaseAdmin = await getFirebaseAdminApp();
+      if (!firebaseAdmin) {
+        return res.status(500).json({ error: 'Firebase admin SDK is not configured' });
       }
 
-      // For security, don't reveal if the email exists or not
-      return res.status(200).json({ 
-        message: 'If an account exists with this email, a password reset link has been sent.' 
+      const link = await firebaseAdmin.auth().generatePasswordResetLink(email, {
+        url: redirectTo || process.env.APP_URL || 'https://accelprocure.com/reset-password',
       });
 
-    } catch (error) {
-      console.error('Password reset request error:', error);
-      return res.status(500).json({ 
-        error: 'An error occurred while processing your request' 
+      return res.status(200).json({
+        provider: 'firebase',
+        resetLink: link,
       });
     }
-  }
-  // Handle password update with reset token
-  else if (token && newPassword) {
-    try {
-      const { error } = await updatePassword(newPassword);
-      
-      if (error) throw error;
 
-      return res.status(200).json({ 
-        message: 'Password has been successfully updated.' 
-      });
-
-    } catch (error) {
-      console.error('Password update error:', error);
-      return res.status(400).json({ 
-        error: error.message || 'Invalid or expired reset token' 
-      });
-    }
-  }
-  // Invalid request
-  else {
-    return res.status(400).json({ 
-      error: 'Invalid request. Provide either email (for reset) or token and newPassword (for update).' 
+    const supabase = getSupabaseClient();
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: redirectTo || process.env.APP_URL || 'https://accelprocure.com/update-password',
     });
+
+    if (error) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    return res.status(200).json({ provider: 'supabase', message: 'Reset email sent' });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    return res.status(500).json({ error: 'Unable to process password reset' });
   }
-}
+};
+
+export default resetPasswordHandler;

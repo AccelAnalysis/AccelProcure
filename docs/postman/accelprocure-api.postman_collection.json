@@ -1,0 +1,347 @@
+{
+  "info": {
+    "name": "AccelProcure API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Regression suite for the AccelProcure API surface"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{baseUrl}}/api/health", "host": ["{{baseUrl}}"], "path": ["api", "health"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('returns 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('reports ok', function () { pm.expect(body.status).to.eql('ok'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test+{{timestamp}}@example.com\",\n  \"password\": \"SamplePass123!\",\n  \"firstName\": \"Test\",\n  \"lastName\": \"User\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('created', function () { pm.response.to.have.status(201); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('login ok', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "pm.environment.set('authToken', data.session ? data.session.access_token : pm.environment.get('authToken'));",
+                  "pm.test('user present', function () { pm.expect(data.user).to.exist; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify Session",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/auth/verify", "host": ["{{baseUrl}}"], "path": ["api", "auth", "verify"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('session verified', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{email}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/auth/reset-password", "host": ["{{baseUrl}}"], "path": ["api", "auth", "reset-password"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('reset accepted', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Profiles",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/profiles/me", "host": ["{{baseUrl}}"], "path": ["api", "profiles", "me"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": { "exec": ["pm.test('profile ok', function () { pm.response.to.have.status(200); });"] }
+            }
+          ]
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"company_name\": \"Sample Co\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/profiles/me", "host": ["{{baseUrl}}"], "path": ["api", "profiles", "me"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": { "exec": ["pm.test('update ok', function () { pm.response.to.have.status(200); });"] }
+            }
+          ]
+        },
+        {
+          "name": "Enrich Profile",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/profiles/enrich", "host": ["{{baseUrl}}"], "path": ["api", "profiles", "enrich"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": { "exec": ["pm.test('enrich accepted', function () { pm.response.to.have.status(200); });"] }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "RFX",
+      "item": [
+        {
+          "name": "Create RFX",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Demo\",\n  \"description\": \"Demo opportunity\",\n  \"submission_deadline\": \"2024-12-31\",\n  \"requirements\": \"Do things\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/rfx", "host": ["{{baseUrl}}"], "path": ["api", "rfx"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('created', function () { pm.response.to.have.status(201); });",
+                  "pm.environment.set('rfxId', pm.response.json().rfx?.id || pm.environment.get('rfxId'))"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List RFX",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/rfx", "host": ["{{baseUrl}}"], "path": ["api", "rfx"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('list ok', function () { pm.response.to.have.status(200); });"] } }]
+        },
+        {
+          "name": "Get RFX",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/rfx/{{rfxId}}", "host": ["{{baseUrl}}"], "path": ["api", "rfx", "{{rfxId}}"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('get ok', function () { pm.response.to.have.status(200); });"] } }]
+        },
+        {
+          "name": "Respond",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"content\": \"Response body\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/rfx/{{rfxId}}/respond", "host": ["{{baseUrl}}"], "path": ["api", "rfx", "{{rfxId}}", "respond"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('respond ok', function () { pm.response.to.have.status(201); });"] } }]
+        },
+        {
+          "name": "Evaluate",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/rfx/{{rfxId}}/evaluate", "host": ["{{baseUrl}}"], "path": ["api", "rfx", "{{rfxId}}", "evaluate"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('evaluate ok', function () { pm.response.to.have.status(200); });"] } }]
+        },
+        {
+          "name": "Match Vendors",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/rfx/{{rfxId}}/match", "host": ["{{baseUrl}}"], "path": ["api", "rfx", "{{rfxId}}", "match"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('match ok', function () { pm.response.to.have.status(200); });"] } }]
+        }
+      ]
+    },
+    {
+      "name": "AI",
+      "item": [
+        {
+          "name": "Generate Proposal",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"rfxId\": \"{{rfxId}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/ai/proposal", "host": ["{{baseUrl}}"], "path": ["api", "ai", "proposal"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('proposal ok', function () { pm.response.to.have.status(200); });"] } }]
+        },
+        {
+          "name": "Generate Response",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"question\": \"What is the status?\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/ai/response", "host": ["{{baseUrl}}"], "path": ["api", "ai", "response"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('response ok', function () { pm.response.to.have.status(200); });"] } }]
+        },
+        {
+          "name": "Suggest Matches",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"rfxId\": \"{{rfxId}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/ai/matches", "host": ["{{baseUrl}}"], "path": ["api", "ai", "matches"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('matches ok', function () { pm.response.to.have.status(200); });"] } }]
+        },
+        {
+          "name": "Map Insights",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/ai/map-insights", "host": ["{{baseUrl}}"], "path": ["api", "ai", "map-insights"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('insights ok', function () { pm.response.to.have.status(200); });"] } }]
+        }
+      ]
+    },
+    {
+      "name": "Map",
+      "item": [
+        {
+          "name": "Get Layers",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/map", "host": ["{{baseUrl}}"], "path": ["api", "map"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('layers ok', function () { pm.response.to.have.status(200); });"] } }]
+        },
+        {
+          "name": "Get Terrain",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/map/terrain", "host": ["{{baseUrl}}"], "path": ["api", "map", "terrain"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('terrain ok', function () { pm.response.to.have.status(200); });"] } }]
+        },
+        {
+          "name": "Update Heatmap",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{authToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"points\": [\n    { \"lat\": 38.9, \"lng\": -77.0, \"intensity\": 0.8 }\n  ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/map/heatmap", "host": ["{{baseUrl}}"], "path": ["api", "map", "heatmap"] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('heatmap ok', function () { pm.response.to.have.status(200); });"] } }]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "email", "value": "test@example.com" },
+    { "key": "password", "value": "SamplePass123!" },
+    { "key": "timestamp", "value": "{{$timestamp}}" }
+  ]
+}
