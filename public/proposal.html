@@ -3,799 +3,189 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Create New RFx Proposal | AccelRFx</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/src/styles/main.css">
-  <style>
-    .ai-suggest-btn {
-      position: absolute;
-      right: 10px;
-      top: 50%;
-      transform: translateY(-50%);
-      z-index: 10;
-    }
-    .proposal-section {
-      margin-bottom: 2rem;
-      position: relative;
-    }
-    .section-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1rem;
-    }
-    .ai-loading {
-      display: inline-block;
-      width: 1.5rem;
-      height: 1.5rem;
-      border: 2px solid #f3f3f3;
-      border-top: 2px solid #3498db;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-left: 10px;
-      vertical-align: middle;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    .credit-badge {
-      background-color: #e9ecef;
-      color: #495057;
-      padding: 0.25rem 0.5rem;
-      border-radius: 4px;
-      font-size: 0.875rem;
-      font-weight: 500;
-    }
-  </style>
+  <title>AccelRFx | New Proposal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/styles/theme.css">
+  <link rel="stylesheet" href="/src/styles/styles.css">
+  <link rel="stylesheet" href="/src/styles/forms.css">
+  <link rel="stylesheet" href="/src/styles/dashboard.css">
+  <link rel="stylesheet" href="/src/styles/responsive.css">
+  <link rel="stylesheet" href="/styles/app-shell.css">
 </head>
-<body class="bg-light">
-  <div id="app" class="d-flex">
-    <!-- Sidebar Navigation -->
-    <div class="sidebar">
-      <div class="sidebar-header">
-        <img src="/assets/logos/accel_logo.png" alt="AccelRFx" class="logo">
+<body>
+  <div class="drawer-backdrop"></div>
+  <div class="app-shell">
+    <aside class="drawer">
+      <div class="logo-block">
+        <img src="/assets/logos/accel_logo.png" alt="AccelRFx" height="32">
+        <p class="text-sm text-secondary">AI Sourcing Workbench</p>
       </div>
-      <nav class="sidebar-nav">
-        <a href="/" class="nav-link"><i class="bi bi-house-door"></i> Dashboard</a>
-        <a href="/proposal.html" class="nav-link active"><i class="bi bi-file-earmark-plus"></i> New Proposal</a>
-        <a href="/responses.html" class="nav-link"><i class="bi bi-inbox"></i> Responses</a>
-        <a href="/profile.html" class="nav-link"><i class="bi bi-person"></i> Profile</a>
+      <nav class="nav-stack">
+        <a href="/app.html" class="nav-link">Dashboard</a>
+        <a href="/proposal.html" class="nav-link active">Create Proposal</a>
+        <a href="/responses.html" class="nav-link">Responses</a>
+        <a href="/profile.html" class="nav-link">Vendor Profile</a>
+        <div class="nav-section-label">Admin</div>
+        <a href="/admin.html" class="nav-link" data-nav-auth>Platform Console</a>
+        <a href="/login.html" class="nav-link" data-nav-guest>Sign in</a>
       </nav>
-    </div>
+      <div class="sidebar-footer">
+        <p class="text-xs text-secondary">Credits</p>
+        <strong data-user-credits>0</strong>
+        <button class="btn btn-primary w-100" data-sign-out data-nav-auth>Sign out</button>
+      </div>
+    </aside>
 
-    <!-- Main Content -->
-    <div class="main-content">
-      <header class="top-bar">
-        <div class="d-flex justify-content-between align-items-center w-100">
-          <h1 class="h4 mb-0">Create New RFx Proposal</h1>
-          <div class="d-flex align-items-center">
-            <span class="me-3 credit-badge">
-              <i class="bi bi-lightning-charge-fill text-warning"></i>
-              <span id="credit-balance">0</span> credits
-            </span>
-            <button id="user-menu" class="btn btn-sm btn-outline-secondary">
-              <i class="bi bi-person-circle"></i>
-              <span id="username">User</span>
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main class="container-fluid py-4">
-        <form id="proposal-form">
-          <!-- Basic Information Section -->
-          <div class="card mb-4">
-            <div class="card-header">
-              <h2 class="h5 mb-0">Basic Information</h2>
-            </div>
-            <div class="card-body">
-              <div class="row">
-                <div class="col-md-6 mb-3">
-                  <label for="proposal-title" class="form-label">Proposal Title</label>
-                  <input type="text" class="form-control" id="proposal-title" required>
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label for="proposal-category" class="form-label">Category</label>
-                  <select class="form-select" id="proposal-category" required>
-                    <option value="">Select a category</option>
-                    <option value="it">Information Technology</option>
-                    <option value="construction">Construction</option>
-                    <option value="consulting">Consulting Services</option>
-                    <option value="manufacturing">Manufacturing</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-              </div>
-              <div class="mb-3">
-                <label for="proposal-description" class="form-label">Description</label>
-                <div class="position-relative">
-                  <textarea class="form-control" id="proposal-description" rows="3" required></textarea>
-                  <button type="button" class="btn btn-sm btn-outline-primary ai-suggest-btn" id="ai-description">
-                    <i class="bi bi-magic"></i> AI Suggest
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Requirements Section -->
-          <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-              <h2 class="h5 mb-0">Requirements</h2>
-              <button type="button" class="btn btn-sm btn-outline-primary" id="add-requirement">
-                <i class="bi bi-plus-lg"></i> Add Requirement
-              </button>
-            </div>
-            <div class="card-body">
-              <div id="requirements-container">
-                <!-- Dynamic requirements will be added here -->
-              </div>
-            </div>
-          </div>
-
-          <!-- Timeline & Budget -->
-          <div class="row mb-4">
-            <div class="col-md-6">
-              <div class="card h-100">
-                <div class="card-header">
-                  <h2 class="h5 mb-0">Timeline</h2>
-                </div>
-                <div class="card-body">
-                  <div class="mb-3">
-                    <label for="proposal-deadline" class="form-label">Proposal Deadline</label>
-                    <input type="datetime-local" class="form-control" id="proposal-deadline" required>
-                  </div>
-                  <div class="mb-3">
-                    <label for="project-start" class="form-label">Expected Project Start Date</label>
-                    <input type="date" class="form-control" id="project-start" required>
-                  </div>
-                  <div class="mb-3">
-                    <label for="project-duration" class="form-label">Project Duration (weeks)</label>
-                    <input type="number" class="form-control" id="project-duration" min="1" required>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="card h-100">
-                <div class="card-header">
-                  <h2 class="h5 mb-0">Budget</h2>
-                </div>
-                <div class="card-body">
-                  <div class="mb-3">
-                    <label for="budget-range" class="form-label">Budget Range</label>
-                    <div class="input-group">
-                      <span class="input-group-text">$</span>
-                      <input type="number" class="form-control" id="budget-min" placeholder="Min" min="0">
-                      <span class="input-group-text">to</span>
-                      <input type="number" class="form-control" id="budget-max" placeholder="Max" min="0">
-                    </div>
-                  </div>
-                  <div class="form-check form-switch mb-3">
-                    <input class="form-check-input" type="checkbox" id="flexible-budget">
-                    <label class="form-check-label" for="flexible-budget">Budget is flexible</label>
-                  </div>
-                  <div class="mb-3">
-                    <label for="payment-terms" class="form-label">Payment Terms</label>
-                    <select class="form-select" id="payment-terms">
-                      <option value="net30">Net 30</option>
-                      <option value="net60">Net 60</option>
-                      <option value="upon-completion">Upon Completion</option>
-                      <option value="custom">Custom</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Evaluation Criteria -->
-          <div class="card mb-4">
-            <div class="card-header">
-              <h2 class="h5 mb-0">Evaluation Criteria</h2>
-            </div>
-            <div class="card-body">
-              <div id="criteria-container">
-                <div class="row mb-3 criterion-item">
-                  <div class="col-md-5">
-                    <input type="text" class="form-control" placeholder="Criterion (e.g., Experience, Price, Timeline)" required>
-                  </div>
-                  <div class="col-md-5">
-                    <input type="range" class="form-range" min="1" max="100" value="50" required>
-                  </div>
-                  <div class="col-md-2">
-                    <div class="d-flex align-items-center">
-                      <span class="me-2">50%</span>
-                      <button type="button" class="btn btn-sm btn-outline-danger">
-                        <i class="bi bi-trash"></i>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <button type="button" class="btn btn-sm btn-outline-primary" id="add-criterion">
-                <i class="bi bi-plus-lg"></i> Add Criterion
-              </button>
-            </div>
-          </div>
-
-          <!-- AI-Generated Content -->
-          <div class="card mb-4">
-            <div class="card-header">
-              <h2 class="h5 mb-0">AI-Generated Content</h2>
-            </div>
-            <div class="card-body">
-              <div class="mb-3">
-                <label for="ai-generated-description" class="form-label">Enhanced Description</label>
-                <div class="position-relative">
-                  <textarea class="form-control" id="ai-generated-description" rows="5" readonly></textarea>
-                  <div class="d-flex justify-content-end mt-2">
-                    <button type="button" class="btn btn-sm btn-outline-primary me-2" id="regenerate-description">
-                      <i class="bi bi-arrow-repeat"></i> Regenerate
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-success" id="use-description">
-                      <i class="bi bi-check-lg"></i> Use This
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <div class="alert alert-info">
-                <i class="bi bi-info-circle"></i> AI-generated content is based on your input and may require review and editing.
-              </div>
-            </div>
-          </div>
-
-          <!-- Submission -->
-          <div class="d-flex justify-content-between">
-            <button type="button" class="btn btn-outline-secondary" id="save-draft">
-              <i class="bi bi-save"></i> Save Draft
-            </button>
-            <div>
-              <button type="button" class="btn btn-outline-secondary me-2" id="preview-proposal">
-                <i class="bi bi-eye"></i> Preview
-              </button>
-              <button type="submit" class="btn btn-primary" id="submit-proposal">
-                <i class="bi bi-send"></i> Publish RFx
-              </button>
-            </div>
-          </div>
-        </form>
-      </main>
-    </div>
-  </div>
-
-  <!-- AI Processing Modal -->
-  <div class="modal fade" id="aiProcessingModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-body text-center p-5">
-          <div class="spinner-border text-primary mb-3" role="status">
-            <span class="visually-hidden">Loading...</span>
-          </div>
-          <h5 class="mb-3">Generating AI Content</h5>
-          <p class="text-muted mb-0">This may take a few moments. Please wait...</p>
+    <header class="app-header">
+      <div class="header-left">
+        <button class="drawer-toggle" aria-label="Toggle navigation">
+          <span class="hamburger"></span>
+        </button>
+        <div>
+          <p class="text-sm text-secondary">RFx Builder</p>
+          <h1 class="text-xl">Create new proposal</h1>
         </div>
       </div>
-    </div>
-  </div>
-
-  <!-- Preview Modal -->
-  <div class="modal fade" id="previewModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">RFx Preview</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body" id="preview-content">
-          <!-- Preview content will be inserted here -->
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-          <button type="button" class="btn btn-primary" id="confirm-submit">
-            <i class="bi bi-check-lg"></i> Confirm & Submit
+      <div class="header-actions">
+        <div class="user-menu-wrapper">
+          <button class="user-menu-toggle" type="button">
+            <span class="avatar">👤</span>
+            <span data-nav-user>Account</span>
           </button>
+          <div class="user-menu">
+            <a href="/profile.html">Profile</a>
+            <button data-sign-out data-nav-auth>Sign out</button>
+            <a href="/login.html" data-nav-guest>Sign in</a>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
+    </header>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-  <script>
-    // Wait for DOM to be fully loaded
-    document.addEventListener('DOMContentLoaded', function() {
-      // Initialize tooltips
-      const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-      tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-      });
-
-      // Initialize modals
-      const aiProcessingModal = new bootstrap.Modal(document.getElementById('aiProcessingModal'));
-      const previewModal = new bootstrap.Modal(document.getElementById('previewModal'));
-
-      // Current user data
-      let currentUser = null;
-      
-      // Check authentication status and load user data
-      async function checkAuth() {
-        try {
-          // This would be replaced with actual auth check
-          const response = await fetch('/api/auth/me');
-          if (response.ok) {
-            currentUser = await response.json();
-            document.getElementById('username').textContent = currentUser.name || 'User';
-            updateCreditBalance(currentUser.credits || 0);
-          } else {
-            window.location.href = '/login.html';
-          }
-        } catch (error) {
-          console.error('Auth check failed:', error);
-          showError('Failed to verify authentication. Please try again.');
-        }
-      }
-
-      // Update credit balance display
-      function updateCreditBalance(credits) {
-        document.getElementById('credit-balance').textContent = credits.toLocaleString();
-      }
-
-      // Show error message
-      function showError(message) {
-        // Implement toast or alert
-        alert(message);
-      }
-
-      // Add requirement row
-      document.getElementById('add-requirement').addEventListener('click', function() {
-        const requirementId = Date.now();
-        const requirementHtml = `
-          <div class="row mb-3 requirement-item" data-id="${requirementId}">
-            <div class="col-md-1 d-flex align-items-center">
-              <div class="form-check">
-                <input class="form-check-input requirement-mandatory" type="checkbox" id="req-${requirementId}" checked>
-              </div>
+    <main class="app-main">
+      <form id="proposalForm" data-proposal-form>
+        <section class="dashboard-card">
+          <div class="dashboard-card-header">
+            <h2 class="dashboard-card-title">RFx basics</h2>
+            <button class="btn btn-sm" type="button" data-action="auto-fill">AI Draft</button>
+          </div>
+          <div class="dashboard-card-body">
+            <div class="form-group">
+              <label for="proposalTitle">Proposal title</label>
+              <input type="text" id="proposalTitle" name="title" required data-proposal-field="title">
             </div>
-            <div class="col-md-8">
-              <input type="text" class="form-control requirement-text" placeholder="Enter requirement" required>
-            </div>
-            <div class="col-md-2">
-              <select class="form-select requirement-type">
-                <option value="text">Text</option>
-                <option value="number">Number</option>
-                <option value="date">Date</option>
-                <option value="file">File Upload</option>
-                <option value="checkbox">Checkbox</option>
+            <div class="form-group">
+              <label for="proposalCategory">Category</label>
+              <select id="proposalCategory" class="form-select" data-proposal-field="category">
+                <option value="">Select category</option>
+                <option value="it">Information Technology</option>
+                <option value="construction">Construction</option>
+                <option value="services">Professional Services</option>
+                <option value="manufacturing">Manufacturing</option>
               </select>
             </div>
-            <div class="col-md-1 d-flex align-items-center">
-              <button type="button" class="btn btn-sm btn-outline-danger remove-requirement">
-                <i class="bi bi-trash"></i>
-              </button>
+            <div class="form-group">
+              <label for="proposalSummary">Summary</label>
+              <textarea id="proposalSummary" rows="4" data-proposal-field="summary"></textarea>
             </div>
           </div>
-        `;
-        document.getElementById('requirements-container').insertAdjacentHTML('beforeend', requirementHtml);
-      });
+        </section>
 
-      // Remove requirement row
-      document.getElementById('requirements-container').addEventListener('click', function(e) {
-        if (e.target.closest('.remove-requirement')) {
-          e.target.closest('.requirement-item').remove();
-        }
-      });
+        <section class="dashboard-card" data-proposal-section="requirements">
+          <div class="dashboard-card-header">
+            <h2 class="dashboard-card-title">Requirements</h2>
+            <button class="btn btn-sm" type="button" data-action="add-requirement">Add requirement</button>
+          </div>
+          <div class="dashboard-card-body" id="requirementList">
+            <p class="text-sm text-secondary">Add technical, functional, or compliance requirements for suppliers.</p>
+          </div>
+        </section>
 
-      // Add evaluation criterion
-      document.getElementById('add-criterion').addEventListener('click', function() {
-        const criterionId = Date.now();
-        const criterionHtml = `
-          <div class="row mb-3 criterion-item" data-id="${criterionId}">
-            <div class="col-md-5">
-              <input type="text" class="form-control" placeholder="Criterion" required>
+        <section class="dashboard-grid">
+          <article class="dashboard-card">
+            <div class="dashboard-card-header">
+              <h2 class="dashboard-card-title">Timeline</h2>
             </div>
-            <div class="col-md-5">
-              <input type="range" class="form-range criterion-weight" min="1" max="100" value="50" required>
-            </div>
-            <div class="col-md-2">
-              <div class="d-flex align-items-center">
-                <span class="me-2 criterion-percent">50%</span>
-                <button type="button" class="btn btn-sm btn-outline-danger remove-criterion">
-                  <i class="bi bi-trash"></i>
-                </button>
+            <div class="dashboard-card-body">
+              <div class="form-group">
+                <label for="dueDate">Proposal deadline</label>
+                <input type="datetime-local" id="dueDate" data-proposal-field="dueDate" required>
+              </div>
+              <div class="form-group">
+                <label for="startDate">Projected start</label>
+                <input type="date" id="startDate" data-proposal-field="startDate">
+              </div>
+              <div class="form-group">
+                <label for="duration">Project duration (weeks)</label>
+                <input type="number" id="duration" min="1" data-proposal-field="duration">
               </div>
             </div>
-          </div>
-        `;
-        document.getElementById('criteria-container').insertAdjacentHTML('beforeend', criterionHtml);
-        updateRangeValue(document.querySelector(`.criterion-item[data-id="${criterionId}"] .criterion-weight`));
-      });
-
-      // Update range input display
-      function updateRangeValue(input) {
-        const percentSpan = input.closest('.criterion-item').querySelector('.criterion-percent');
-        if (percentSpan) {
-          percentSpan.textContent = `${input.value}%`;
-        }
-      }
-
-      // Handle range input changes
-      document.getElementById('criteria-container').addEventListener('input', function(e) {
-        if (e.target.classList.contains('criterion-weight')) {
-          updateRangeValue(e.target);
-        }
-      });
-
-      // Remove criterion
-      document.getElementById('criteria-container').addEventListener('click', function(e) {
-        if (e.target.closest('.remove-criterion')) {
-          e.target.closest('.criterion-item').remove();
-        }
-      });
-
-      // AI Description Suggestion
-      document.getElementById('ai-description').addEventListener('click', function() {
-        const title = document.getElementById('proposal-title').value;
-        const category = document.getElementById('proposal-category').value;
-        const description = document.getElementById('proposal-description').value;
-        
-        if (!title || !description) {
-          showError('Please fill in the title and description before generating AI suggestions.');
-          return;
-        }
-
-        generateAIContent('description', { title, category, description });
-      });
-
-      // Regenerate AI content
-      document.getElementById('regenerate-description').addEventListener('click', function() {
-        const title = document.getElementById('proposal-title').value;
-        const category = document.getElementById('proposal-category').value;
-        const description = document.getElementById('proposal-description').value;
-        
-        generateAIContent('description', { title, category, description });
-      });
-
-      // Use AI-generated description
-      document.getElementById('use-description').addEventListener('click', function() {
-        const aiDescription = document.getElementById('ai-generated-description').value;
-        if (aiDescription) {
-          document.getElementById('proposal-description').value = aiDescription;
-          showToast('Description updated with AI-generated content', 'success');
-        }
-      });
-
-      // Generate AI content
-      async function generateAIContent(type, data) {
-        try {
-          // Show loading state
-          const generateButton = type === 'description' ? 
-            document.getElementById('ai-description') : 
-            document.getElementById('regenerate-description');
-          
-          const originalContent = generateButton.innerHTML;
-          generateButton.disabled = true;
-          generateButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating...';
-          
-          aiProcessingModal.show();
-          
-          // Simulate API call - replace with actual API call
-          const response = await fetch('/api/ai/generate', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({
-              type,
-              ...data
-            })
-          });
-
-          if (!response.ok) {
-            throw new Error('Failed to generate content');
-          }
-
-          const result = await response.json();
-          
-          // Update the AI generated content area
-          if (type === 'description') {
-            document.getElementById('ai-generated-description').value = result.content;
-          }
-          
-          // Update credit balance if returned
-          if (result.credits !== undefined) {
-            updateCreditBalance(result.credits);
-          }
-          
-          showToast('AI content generated successfully', 'success');
-          
-        } catch (error) {
-          console.error('AI generation failed:', error);
-          showError('Failed to generate AI content. Please try again.');
-        } finally {
-          // Reset button state
-          generateButton.disabled = false;
-          generateButton.innerHTML = originalContent;
-          aiProcessingModal.hide();
-        }
-      }
-
-      // Preview proposal
-      document.getElementById('preview-proposal').addEventListener('click', function() {
-        if (!validateForm()) return;
-        
-        // Generate preview content
-        const title = document.getElementById('proposal-title').value;
-        const description = document.getElementById('proposal-description').value;
-        const deadline = document.getElementById('proposal-deadline').value;
-        
-        const previewContent = `
-          <h3>${title}</h3>
-          <hr>
-          <h5>Description</h5>
-          <p>${description}</p>
-          
-          <h5 class="mt-4">Requirements</h5>
-          <ul id="preview-requirements">
-            ${Array.from(document.querySelectorAll('.requirement-item')).map(item => {
-              const text = item.querySelector('.requirement-text').value;
-              const type = item.querySelector('.requirement-type').value;
-              const isMandatory = item.querySelector('.requirement-mandatory').checked;
-              return `<li>${text} <span class="badge bg-secondary">${type}</span> ${isMandatory ? '<span class="badge bg-danger">Required</span>' : ''}</li>`;
-            }).join('')}
-          </ul>
-          
-          <div class="row mt-4">
-            <div class="col-md-6">
-              <h5>Timeline</h5>
-              <p><strong>Proposal Deadline:</strong> ${new Date(deadline).toLocaleString()}</p>
-              <p><strong>Project Start:</strong> ${document.getElementById('project-start').value}</p>
-              <p><strong>Duration:</strong> ${document.getElementById('project-duration').value} weeks</p>
+          </article>
+          <article class="dashboard-card">
+            <div class="dashboard-card-header">
+              <h2 class="dashboard-card-title">Budget & Terms</h2>
             </div>
-            <div class="col-md-6">
-              <h5>Budget</h5>
-              <p><strong>Range:</strong> $${document.getElementById('budget-min').value || '0'} - $${document.getElementById('budget-max').value || 'Open'}</p>
-              <p><strong>Flexible:</strong> ${document.getElementById('flexible-budget').checked ? 'Yes' : 'No'}</p>
-              <p><strong>Payment Terms:</strong> ${document.getElementById('payment-terms').options[document.getElementById('payment-terms').selectedIndex].text}</p>
+            <div class="dashboard-card-body">
+              <div class="form-group">
+                <label for="budgetMin">Budget range</label>
+                <div class="input-group">
+                  <input type="number" id="budgetMin" placeholder="Minimum" data-proposal-field="budgetMin">
+                  <input type="number" id="budgetMax" placeholder="Maximum" data-proposal-field="budgetMax">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="paymentTerms">Payment terms</label>
+                <select id="paymentTerms" class="form-select" data-proposal-field="paymentTerms">
+                  <option value="net30">Net 30</option>
+                  <option value="net60">Net 60</option>
+                  <option value="milestones">Milestone based</option>
+                </select>
+              </div>
             </div>
+          </article>
+        </section>
+
+        <section class="dashboard-card" data-proposal-section="evaluation">
+          <div class="dashboard-card-header">
+            <h2 class="dashboard-card-title">Evaluation criteria</h2>
+            <button class="btn btn-sm" type="button" data-action="add-criterion">Add criterion</button>
           </div>
-          
-          <h5 class="mt-4">Evaluation Criteria</h5>
-          <div class="table-responsive">
-            <table class="table table-sm">
-              <thead>
-                <tr>
-                  <th>Criterion</th>
-                  <th style="width: 200px;">Weight</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${Array.from(document.querySelectorAll('.criterion-item')).map(item => {
-                  const name = item.querySelector('input[type="text"]').value;
-                  const weight = item.querySelector('.criterion-weight').value;
-                  return `
-                    <tr>
-                      <td>${name}</td>
-                      <td>
-                        <div class="progress">
-                          <div class="progress-bar" role="progressbar" style="width: ${weight}%" 
-                               aria-valuenow="${weight}" aria-valuemin="0" aria-valuemax="100">
-                            ${weight}%
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  `;
-                }).join('')}
-              </tbody>
-            </table>
+          <div class="dashboard-card-body" id="evaluationList">
+            <p class="text-sm text-secondary">Weight how proposals will be scored.</p>
           </div>
-        `;
-        
-        document.getElementById('preview-content').innerHTML = previewContent;
-        previewModal.show();
-      });
+        </section>
 
-      // Form validation
-      function validateForm() {
-        const title = document.getElementById('proposal-title').value.trim();
-        const description = document.getElementById('proposal-description').value.trim();
-        const deadline = document.getElementById('proposal-deadline').value;
-        
-        if (!title) {
-          showError('Please enter a proposal title');
-          return false;
-        }
-        
-        if (!description) {
-          showError('Please enter a description');
-          return false;
-        }
-        
-        if (!deadline) {
-          showError('Please select a proposal deadline');
-          return false;
-        }
-        
-        // Check if there's at least one requirement
-        if (document.querySelectorAll('.requirement-item').length === 0) {
-          showError('Please add at least one requirement');
-          return false;
-        }
-        
-        // Check if all requirement fields are filled
-        const requirementInputs = document.querySelectorAll('.requirement-text');
-        for (const input of requirementInputs) {
-          if (!input.value.trim()) {
-            showError('Please fill in all requirement fields');
-            input.focus();
-            return false;
-          }
-        }
-        
-        return true;
-      }
+        <section class="dashboard-card" data-proposal-section="attachments">
+          <div class="dashboard-card-header">
+            <h2 class="dashboard-card-title">Attachments</h2>
+            <button class="btn btn-sm" type="button" data-action="add-attachment">Upload</button>
+          </div>
+          <div class="dashboard-card-body" id="attachmentList">
+            <p class="text-sm text-secondary">Drop files or link to docs buyers should review.</p>
+          </div>
+        </section>
 
-      // Form submission
-      document.getElementById('proposal-form').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        if (!validateForm()) {
-          return;
-        }
-        
-        try {
-          // Show loading state
-          const submitButton = document.getElementById('submit-proposal');
-          const originalContent = submitButton.innerHTML;
-          submitButton.disabled = true;
-          submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Submitting...';
-          
-          // Collect form data
-          const formData = {
-            title: document.getElementById('proposal-title').value,
-            category: document.getElementById('proposal-category').value,
-            description: document.getElementById('proposal-description').value,
-            requirements: Array.from(document.querySelectorAll('.requirement-item')).map(item => ({
-              text: item.querySelector('.requirement-text').value,
-              type: item.querySelector('.requirement-type').value,
-              mandatory: item.querySelector('.requirement-mandatory').checked
-            })),
-            timeline: {
-              deadline: document.getElementById('proposal-deadline').value,
-              startDate: document.getElementById('project-start').value,
-              duration: parseInt(document.getElementById('project-duration').value)
-            },
-            budget: {
-              min: document.getElementById('budget-min').value ? parseFloat(document.getElementById('budget-min').value) : null,
-              max: document.getElementById('budget-max').value ? parseFloat(document.getElementById('budget-max').value) : null,
-              flexible: document.getElementById('flexible-budget').checked,
-              paymentTerms: document.getElementById('payment-terms').value
-            },
-            evaluationCriteria: Array.from(document.querySelectorAll('.criterion-item')).map(item => ({
-              name: item.querySelector('input[type="text"]').value,
-              weight: parseInt(item.querySelector('.criterion-weight').value)
-            }))
-          };
-          
-          // Submit to API
-          const response = await fetch('/api/rfx/create', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify(formData)
-          });
-          
-          if (!response.ok) {
-            throw new Error('Failed to submit proposal');
-          }
-          
-          const result = await response.json();
-          
-          // Show success message and redirect
-          showToast('Proposal created successfully!', 'success');
-          setTimeout(() => {
-            window.location.href = `/rfx/${result.rfxId}`;
-          }, 1500);
-          
-        } catch (error) {
-          console.error('Proposal submission failed:', error);
-          showError('Failed to submit proposal. Please try again.');
-        } finally {
-          // Reset button state
-          const submitButton = document.getElementById('submit-proposal');
-          submitButton.disabled = false;
-          submitButton.innerHTML = originalContent;
-        }
-      });
+        <section class="dashboard-card" id="aiSuggestionPanel" hidden>
+          <div class="dashboard-card-header">
+            <h2 class="dashboard-card-title">AI suggestions</h2>
+            <button class="btn btn-sm" type="button" data-action="dismiss-suggestions">Dismiss</button>
+          </div>
+          <div class="dashboard-card-body" data-proposal-suggestions>
+            <p>AI generated guidance will appear here.</p>
+          </div>
+        </section>
 
-      // Confirm and submit from preview
-      document.getElementById('confirm-submit').addEventListener('click', function() {
-        previewModal.hide();
-        document.getElementById('proposal-form').dispatchEvent(new Event('submit'));
-      });
+        <div style="display:flex; gap:1rem; justify-content:flex-end;">
+          <button class="btn btn-outline" type="button" data-action="save-draft">Save draft</button>
+          <button class="btn btn-primary" type="submit" data-action="submit-proposal">Submit proposal</button>
+        </div>
+      </form>
+    </main>
+  </div>
 
-      // Save draft
-      document.getElementById('save-draft').addEventListener('click', function() {
-        // This would save the current form state to local storage or API
-        const formData = {
-          title: document.getElementById('proposal-title').value,
-          description: document.getElementById('proposal-description').value,
-          // ... collect other form data
-          lastSaved: new Date().toISOString()
-        };
-        
-        localStorage.setItem('draftProposal', JSON.stringify(formData));
-        showToast('Draft saved successfully', 'success');
-      });
-
-      // Load draft if exists
-      function loadDraft() {
-        const draft = localStorage.getItem('draftProposal');
-        if (draft) {
-          try {
-            const data = JSON.parse(draft);
-            if (confirm('You have a saved draft. Would you like to load it?')) {
-              document.getElementById('proposal-title').value = data.title || '';
-              document.getElementById('proposal-description').value = data.description || '';
-              // ... load other form fields
-            }
-          } catch (e) {
-            console.error('Failed to load draft:', e);
-          }
-        }
-      }
-
-      // Initialize date/time pickers
-      function initDatePickers() {
-        const now = new Date();
-        const tomorrow = new Date(now);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        
-        // Set min date for deadline to now
-        document.getElementById('proposal-deadline').min = now.toISOString().slice(0, 16);
-        
-        // Set min date for project start to today
-        document.getElementById('project-start').min = now.toISOString().split('T')[0];
-        
-        // Set default deadline to tomorrow at 5 PM
-        const defaultDeadline = new Date(tomorrow);
-        defaultDeadline.setHours(17, 0, 0, 0);
-        document.getElementById('proposal-deadline').value = defaultDeadline.toISOString().slice(0, 16);
-        
-        // Set default project start to tomorrow
-        document.getElementById('project-start').value = tomorrow.toISOString().split('T')[0];
-      }
-
-      // Show toast notification
-      function showToast(message, type = 'info') {
-        // Implement toast notification
-        console.log(`[${type.toUpperCase()}] ${message}`);
-        // In a real app, you would use a toast library or custom implementation
-        alert(`${type.toUpperCase()}: ${message}`);
-      }
-
-      // Initialize the page
-      async function init() {
-        await checkAuth();
-        initDatePickers();
-        loadDraft();
-        
-        // Add some default requirements if none exist
-        if (document.querySelectorAll('.requirement-item').length === 0) {
-          document.getElementById('add-requirement').click();
-        }
-      }
-
-      // Start the app
-      init();
-    });
-  </script>
+  <script type="module" src="/src/scripts/shared.js"></script>
+  <script type="module" src="/src/scripts/nav.js"></script>
+  <script type="module" src="/src/scripts/proposal.js"></script>
 </body>
 </html>

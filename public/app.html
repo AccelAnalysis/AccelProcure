@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AccelRFx | Intelligence Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css">
+  <link rel="stylesheet" href="/src/styles/theme.css">
+  <link rel="stylesheet" href="/src/styles/styles.css">
+  <link rel="stylesheet" href="/src/styles/dashboard.css">
+  <link rel="stylesheet" href="/src/styles/forms.css">
+  <link rel="stylesheet" href="/src/styles/responsive.css">
+  <link rel="stylesheet" href="/styles/app-shell.css">
+</head>
+<body>
+  <div class="drawer-backdrop"></div>
+  <div class="app-shell">
+    <aside class="drawer">
+      <div class="logo-block">
+        <img src="/assets/logos/accel_logo.png" alt="AccelRFx" height="32">
+        <p class="text-sm text-secondary">AI Sourcing Workbench</p>
+      </div>
+      <nav class="nav-stack">
+        <a href="/app.html" class="nav-link active">Dashboard</a>
+        <a href="/proposal.html" class="nav-link">Create Proposal</a>
+        <a href="/responses.html" class="nav-link">Responses</a>
+        <a href="/profile.html" class="nav-link">Vendor Profile</a>
+        <div class="nav-section-label">Admin</div>
+        <a href="/admin.html" class="nav-link" data-nav-auth>Platform Console</a>
+        <a href="/login.html" class="nav-link" data-nav-guest>Sign in</a>
+      </nav>
+      <div class="sidebar-footer">
+        <p class="text-xs text-secondary">Logged in as</p>
+        <strong data-nav-user>Guest</strong>
+        <p class="text-xs text-secondary">Credits <span data-user-credits>0</span></p>
+        <button class="btn btn-primary w-100" data-sign-out data-nav-auth>Sign out</button>
+      </div>
+    </aside>
+
+    <header class="app-header">
+      <div class="header-left">
+        <button class="drawer-toggle" aria-label="Toggle navigation">
+          <span class="hamburger"></span>
+        </button>
+        <div>
+          <p class="text-sm text-secondary">Welcome back</p>
+          <h1 class="text-xl" data-user-name>Accelerator</h1>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="credit-display" data-auth>
+          <span class="text-sm text-secondary">Credits</span>
+          <strong data-user-credits>0</strong>
+        </div>
+        <button class="notification-bell" aria-label="Notifications">
+          🔔
+          <span class="notification-count">0</span>
+        </button>
+        <div class="notification-panel">
+          <div class="notification-panel-header">
+            <strong>Notifications</strong>
+            <button class="btn btn-link btn-sm" type="button">Mark all read</button>
+          </div>
+          <div class="notification-list"></div>
+        </div>
+        <div class="user-menu-wrapper">
+          <button class="user-menu-toggle" type="button">
+            <span class="avatar">👤</span>
+            <span data-nav-user>Account</span>
+          </button>
+          <div class="user-menu">
+            <a href="/profile.html" data-nav-auth>Profile</a>
+            <a href="/proposal.html" data-nav-auth>Launch RFx</a>
+            <button data-sign-out data-nav-auth>Sign out</button>
+            <a href="/login.html" data-nav-guest>Sign in</a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <section class="dashboard-grid dashboard-grid-4" aria-label="Key metrics">
+        <article class="dashboard-card dashboard-card-primary">
+          <div class="dashboard-card-header">
+            <h2 class="dashboard-card-title">Active RFx</h2>
+            <span class="badge" id="metrics-active">0</span>
+          </div>
+          <div class="dashboard-card-body">
+            <p class="text-4xl" data-stat="activeRfx">0</p>
+            <p class="text-sm text-secondary" data-stat-note="activeRfx">Pending launches</p>
+          </div>
+        </article>
+        <article class="dashboard-card">
+          <div class="dashboard-card-header">
+            <h2 class="dashboard-card-title">AI Matches</h2>
+            <span class="badge" id="metrics-matches">0</span>
+          </div>
+          <div class="dashboard-card-body">
+            <p class="text-4xl" data-stat="aiMatches">0</p>
+            <p class="text-sm text-secondary">Matches in last 7 days</p>
+          </div>
+        </article>
+        <article class="dashboard-card">
+          <div class="dashboard-card-header">
+            <h2 class="dashboard-card-title">Responses</h2>
+            <span class="badge" id="metrics-responses">0</span>
+          </div>
+          <div class="dashboard-card-body">
+            <p class="text-4xl" data-stat="responses">0</p>
+            <p class="text-sm text-secondary">Awaiting review</p>
+          </div>
+        </article>
+        <article class="dashboard-card">
+          <div class="dashboard-card-header">
+            <h2 class="dashboard-card-title">SLA Health</h2>
+            <span class="badge" id="metrics-sla">0</span>
+          </div>
+          <div class="dashboard-card-body">
+            <p class="text-4xl" data-stat="sla">99%</p>
+            <p class="text-sm text-secondary">On-time responses</p>
+          </div>
+        </article>
+      </section>
+
+      <section class="map-panel" aria-label="Opportunity map">
+        <div id="map"></div>
+        <div class="map-overlay">
+          <div class="map-overlay-header">
+            <strong>Filters</strong>
+          </div>
+          <form class="map-filters" id="mapFilters">
+            <label>
+              Region
+              <select class="form-select" name="region">
+                <option value="all">All</option>
+                <option value="na">North America</option>
+                <option value="emea">EMEA</option>
+                <option value="apac">APAC</option>
+              </select>
+            </label>
+            <label>
+              Industry
+              <select class="form-select" name="industry">
+                <option value="all">All</option>
+                <option value="tech">Technology</option>
+                <option value="manufacturing">Manufacturing</option>
+                <option value="public">Public Sector</option>
+              </select>
+            </label>
+            <label>
+              Status
+              <select class="form-select" name="status">
+                <option value="active">Active</option>
+                <option value="draft">Draft</option>
+                <option value="awarded">Awarded</option>
+              </select>
+            </label>
+          </form>
+        </div>
+      </section>
+
+      <section class="dashboard-grid dashboard-grid-2">
+        <article class="dashboard-card">
+          <div class="dashboard-card-header">
+            <h2 class="dashboard-card-title">Pipeline</h2>
+            <div class="dashboard-card-actions">
+              <button class="btn btn-sm" data-action="refresh-pipeline">Refresh</button>
+            </div>
+          </div>
+          <div class="dashboard-card-body table-wrapper">
+            <table class="data-table" id="pipelineTable">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Stage</th>
+                  <th>Due</th>
+                  <th>Owner</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="4">Loading opportunities…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+        <article class="dashboard-card">
+          <div class="dashboard-card-header">
+            <h2 class="dashboard-card-title">AI Insights</h2>
+            <div class="dashboard-card-actions">
+              <button class="btn btn-link btn-sm" type="button" data-action="open-insights">See all</button>
+            </div>
+          </div>
+          <div class="dashboard-card-body" id="aiInsights">
+            <p class="text-sm text-secondary">Insights will appear here when AI analysis is ready.</p>
+          </div>
+        </article>
+      </section>
+
+      <section class="dashboard-grid dashboard-grid-2">
+        <article class="dashboard-card">
+          <div class="dashboard-card-header">
+            <h2 class="dashboard-card-title">Recent Activity</h2>
+          </div>
+          <div class="dashboard-card-body" id="activityStream">
+            <ul class="activity-feed"></ul>
+          </div>
+        </article>
+        <article class="dashboard-card">
+          <div class="dashboard-card-header">
+            <h2 class="dashboard-card-title">Tasks</h2>
+            <button class="btn btn-sm" type="button" data-action="add-task">Add task</button>
+          </div>
+          <div class="dashboard-card-body">
+            <ul id="taskList" class="task-list" aria-live="polite"></ul>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <div id="notification-area"></div>
+  <div id="loading-overlay" class="loading-overlay" role="status">
+    <div class="spinner" aria-hidden="true"></div>
+    <p>Preparing AccelRFx…</p>
+  </div>
+
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+  <script type="module" src="/src/scripts/shared.js"></script>
+  <script type="module" src="/src/scripts/nav.js"></script>
+  <script type="module" src="/src/scripts/map3d.js"></script>
+  <script type="module" src="/src/scripts/map-ai.js"></script>
+  <script type="module" src="/src/scripts/app.js"></script>
+  <script type="module" src="/src/scripts/init.js"></script>
+</body>
+</html>
