@@ -4,7 +4,7 @@ import { validateRequest } from '../middleware/validateRequest.js';
 import generateProposalHandler from '../ai/generateProposal.js';
 import generateResponseHandler from '../ai/generateResponse.js';
 import suggestMatchesHandler from '../ai/suggestMatches.js';
-import mapInsightsHandler from '../ai/mapInsights.js';
+import mapInsightsHandler, { mapInsightMetricsHandler } from '../ai/mapInsights.js';
 import { rateLimit } from '../middleware/rateLimit.js';
 
 const router = Router();
@@ -51,5 +51,6 @@ router.post(
 );
 
 router.get('/map-insights', requireAuth, aiLimiter, mapInsightsHandler);
+router.get('/map-insights/metrics', requireAuth, aiLimiter, mapInsightMetricsHandler);
 
 export default router;
