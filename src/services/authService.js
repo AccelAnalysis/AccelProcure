@@ -1,4 +1,9 @@
-import httpClient, { getAuthToken, setAuthToken, clearAuthToken } from './httpClient';
+import httpClient, {
+  getAuthToken,
+  setAuthToken,
+  clearAuthToken,
+  setUnauthorizedHandler
+} from './httpClient';
 
 const AUTH_BASE = '/auth';
 let currentUser = null;
@@ -139,5 +144,9 @@ export const authService = {
     return getAuthToken();
   }
 };
+
+setUnauthorizedHandler(() => {
+  clearSession();
+});
 
 export default authService;
