@@ -8,14 +8,33 @@ const normalizeFilters = (filters = {}) =>
   );
 
 export const getMapLayers = (filters = {}) =>
-  httpClient.get(`${MAP_BASE}/layers`, { params: normalizeFilters(filters) });
+  httpClient.get(MAP_BASE, { params: normalizeFilters(filters) });
+
+const serializeBounds = (bounds = {}) => {
+  if (!bounds || typeof bounds !== 'object') {
+    throw new Error('Map bounds are required');
+  }
+
+  const { west, south, east, north } = bounds;
+  const parts = [west, south, east, north];
+  if (parts.some((value) => typeof value !== 'number')) {
+    throw new Error('Bounds must include numeric west, south, east, and north values');
+  }
+
+  return parts.join(',');
+};
 
 export const get3DTerrainData = (bounds, options = {}) => {
   if (!bounds) {
     throw new Error('Map bounds are required');
   }
 
-  return httpClient.post(`${MAP_BASE}/terrain`, { bounds, ...options });
+  return httpClient.get(`${MAP_BASE}/terrain`, {
+    params: {
+      bbox: serializeBounds(bounds),
+      ...normalizeFilters(options),
+    },
+  });
 };
 
 export const mapService = {

@@ -3,6 +3,7 @@ export default {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '\.(css|scss)$': 'identity-obj-proxy',
+    '^supertest$': '<rootDir>/src/test-utils/supertest.js',
   },
   transform: {
     '^.+\\.(js|jsx)$': 'babel-jest',

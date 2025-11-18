@@ -48,7 +48,7 @@ export const respondToRfx = (rfxId, responseData) => {
   if (!responseData) {
     throw new Error('Response data is required');
   }
-  return httpClient.post(`${RFX_BASE}/${rfxId}/responses`, responseData);
+  return httpClient.post(`${RFX_BASE}/${rfxId}/respond`, responseData);
 };
 
 export const rfxService = {
