@@ -20,6 +20,7 @@
     "@deck.gl/aggregation-layers": "^8.10.0",
     "@deck.gl/core": "^8.10.0",
     "@deck.gl/layers": "^8.10.0",
+    "@deck.gl/react": "^8.10.0",
     "@supabase/supabase-js": "^2.39.0",
     "firebase": "^10.7.0",
     "mapbox-gl": "^3.0.0",

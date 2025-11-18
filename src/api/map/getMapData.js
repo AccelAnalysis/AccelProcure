@@ -1,5 +1,4 @@
 import { supabase } from '../../config/auth.config';
-import { env } from '../../config/app.config';
 
 /**
  * Fetches map layer data for RFX opportunities and AI insights
