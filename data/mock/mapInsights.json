@@ -1,0 +1,81 @@
+{
+  "region": "global",
+  "generatedAt": "2024-06-01T12:00:00.000Z",
+  "summary": {
+    "text": "North American suppliers are accelerating submissions while two EMEA hotspots cool down.",
+    "bullets": [
+      "Active RFx volume up 12% week over week",
+      "Four high-confidence hotspots clustered around logistics hubs",
+      "Two anomaly alerts tied to duplicate vendors"
+    ],
+    "provider": "openai"
+  },
+  "metrics": {
+    "region": "global",
+    "updatedAt": "2024-06-01T12:00:00.000Z",
+    "totals": {
+      "activeRfx": 128,
+      "openOpportunities": 52,
+      "vendorCoverage": 72.5,
+      "anomalies": 3
+    },
+    "trend": {
+      "activeRfx": 0.12,
+      "openOpportunities": -0.03,
+      "vendorCoverage": 0.02,
+      "anomalies": 0.01
+    },
+    "hotspots": [
+      { "name": "Seattle Logistics", "score": 0.91, "centroid": [-122.33, 47.61] },
+      { "name": "Berlin Mobility", "score": 0.78, "centroid": [13.40, 52.52] }
+    ],
+    "alerts": [
+      { "message": "Duplicate vendor responses", "severity": 0.6 }
+    ]
+  },
+  "overlays": {
+    "updatedAt": "2024-06-01T12:00:00.000Z",
+    "hotspots": [
+      { "name": "Seattle Logistics", "score": 0.91, "centroid": [-122.33, 47.61] },
+      { "name": "Berlin Mobility", "score": 0.78, "centroid": [13.40, 52.52] }
+    ],
+    "features": [
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [-122.335167, 47.608013]
+        },
+        "properties": {
+          "id": "rfp-001",
+          "title": "Cloud cost optimization",
+          "status": "open",
+          "budget": 3500000,
+          "due_date": "2024-06-15"
+        }
+      }
+    ],
+    "aiInsights": {
+      "heatmap": [
+        { "lng": -122.33, "lat": 47.61, "intensity": 0.9 },
+        { "lng": 13.40, "lat": 52.52, "intensity": 0.7 }
+      ],
+      "connections": [
+        {
+          "sourcePosition": [-122.33, 47.61],
+          "targetPosition": [13.40, 52.52],
+          "weight": 0.45
+        }
+      ],
+      "confidenceZones": [
+        {
+          "coordinates": [[[-123, 47.4], [-122.2, 47.4], [-122.2, 47.8], [-123, 47.8], [-123, 47.4]]],
+          "confidence": 0.82
+        }
+      ],
+      "anomalies": [
+        { "position": [-77.03, 38.90], "severity": 0.6, "message": "Budget jump" }
+      ]
+    }
+  }
+}

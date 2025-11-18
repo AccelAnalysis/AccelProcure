@@ -1,6 +1,11 @@
 import { MapboxLayer } from '@deck.gl/mapbox';
 import { ScatterplotLayer, HeatmapLayer, ArcLayer, PolygonLayer } from 'deck.gl';
 import { getMapLayers } from '../services/mapService.js';
+import {
+  getMapInsightSummary,
+  getLiveMapInsightMetrics,
+  subscribeToMapInsightUpdates,
+} from '../services/analyticsService.js';
 import { formatCurrency, formatRelativeTime, debounce } from './shared.js';
 
 const LAYER_IDS = {
@@ -16,16 +21,31 @@ export class MapAIOverlay {
     this.map = map;
     this.layers = new Map();
     this.data = { features: [], aiInsights: {} };
+    this.filters = {};
+    this.liveMetrics = null;
+    this.panelElements = null;
+    this.metricsElements = null;
+    this.unsubscribeRealtime = null;
+    this.handleRefreshClick = () => this.load(this.filters);
+    this.handleMetricRefresh = () => this.refreshLiveMetrics(this.filters);
     this.handleResize = debounce(() => this.syncTooltip(), 100);
     window.addEventListener('resize', this.handleResize);
+    this.ensurePanels();
   }
 
   async load(filters = {}) {
     try {
-      const payload = await getMapLayers(filters);
-      const normalized = normalizePayload(payload);
+      this.filters = filters;
+      const [payload, insightSummary] = await Promise.all([
+        getMapLayers(filters),
+        getMapInsightSummary(filters),
+      ]);
+      const normalized = normalizePayload(payload, insightSummary?.overlays);
       this.data = normalized;
       this.renderLayers();
+      this.renderInsightSummary(insightSummary);
+      this.renderLiveMetrics(insightSummary?.metrics);
+      await this.refreshLiveMetrics(filters);
     } catch (error) {
       console.error('Failed to load AI map layers', error);
     }
@@ -133,6 +153,207 @@ export class MapAIOverlay {
     }
   }
 
+  ensurePanels() {
+    if (!this.map?.getContainer) {
+      return;
+    }
+    const container = this.map.getContainer();
+    if (!container) {
+      return;
+    }
+
+    let panel = container.querySelector('.map-ai-panel');
+    if (!panel) {
+      panel = document.createElement('div');
+      panel.className = 'map-ai-panel map-overlay';
+      panel.innerHTML = `
+        <header>
+          <div>
+            <p class="kicker">AI summary</p>
+            <h3>Live Map Insights</h3>
+          </div>
+          <button type="button" data-insight-refresh aria-label="Refresh insights">Refresh</button>
+        </header>
+        <p class="text-xs text-secondary" data-insight-updated>Connecting…</p>
+        <div data-insight-summary class="text-sm text-secondary">AI analysis will populate shortly.</div>
+        <ul class="insight-list" data-insight-bullets></ul>
+      `;
+      container.appendChild(panel);
+    }
+
+    const refreshBtn = panel.querySelector('[data-insight-refresh]');
+    if (refreshBtn) {
+      refreshBtn.removeEventListener('click', this.handleRefreshClick);
+      refreshBtn.addEventListener('click', this.handleRefreshClick);
+    }
+
+    this.panelElements = {
+      panel,
+      summary: panel.querySelector('[data-insight-summary]'),
+      bullets: panel.querySelector('[data-insight-bullets]'),
+      updated: panel.querySelector('[data-insight-updated]'),
+      refresh: refreshBtn,
+    };
+
+    let metricsPanel = container.querySelector('.map-metrics-panel');
+    if (!metricsPanel) {
+      metricsPanel = document.createElement('div');
+      metricsPanel.className = 'map-metrics-panel map-overlay';
+      metricsPanel.style.top = 'auto';
+      metricsPanel.style.bottom = '24px';
+      metricsPanel.innerHTML = `
+        <header>
+          <div>
+            <p class="kicker">Live metrics</p>
+            <h3>Map Signals</h3>
+          </div>
+          <button type="button" data-metrics-refresh aria-label="Refresh metrics">Sync</button>
+        </header>
+        <p class="text-xs text-secondary" data-metrics-updated>Awaiting telemetry…</p>
+        <div class="map-metrics-grid" data-metrics-grid></div>
+      `;
+      container.appendChild(metricsPanel);
+    }
+
+    const metricsRefresh = metricsPanel.querySelector('[data-metrics-refresh]');
+    if (metricsRefresh) {
+      metricsRefresh.removeEventListener('click', this.handleMetricRefresh);
+      metricsRefresh.addEventListener('click', this.handleMetricRefresh);
+    }
+
+    this.metricsElements = {
+      panel: metricsPanel,
+      grid: metricsPanel.querySelector('[data-metrics-grid]'),
+      updated: metricsPanel.querySelector('[data-metrics-updated]'),
+      refresh: metricsRefresh,
+    };
+  }
+
+  renderInsightSummary(payload) {
+    if (!this.panelElements?.summary) {
+      return;
+    }
+    if (!payload) {
+      this.panelElements.summary.textContent = 'AI analysis will populate shortly.';
+      this.panelElements.bullets.innerHTML = '';
+      if (this.panelElements.updated) {
+        this.panelElements.updated.textContent = 'Awaiting telemetry…';
+      }
+      return;
+    }
+
+    const summaryText = payload.summary?.text || 'AI is analysing the current scope.';
+    this.panelElements.summary.textContent = summaryText;
+    const bullets = payload.summary?.bullets || [];
+    if (bullets.length) {
+      this.panelElements.bullets.innerHTML = bullets.map((item) => `<li>${item}</li>`).join('');
+    } else {
+      this.panelElements.bullets.innerHTML = '<li>Signals are being processed…</li>';
+    }
+
+    if (this.panelElements.updated) {
+      const provider = (payload.summary?.provider || 'system').toUpperCase();
+      const timestamp = payload.generatedAt || payload.overlays?.updatedAt;
+      const readableTime = timestamp ? formatRelativeTime(timestamp) : 'moments ago';
+      this.panelElements.updated.textContent = `Generated ${readableTime} · ${provider}`;
+    }
+  }
+
+  renderLiveMetrics(metrics, { loading = false, error } = {}) {
+    if (!this.metricsElements?.grid) {
+      return;
+    }
+
+    if (loading) {
+      this.metricsElements.grid.innerHTML = '<p class="text-sm text-secondary">Loading live metrics…</p>';
+      return;
+    }
+
+    if (error) {
+      this.metricsElements.grid.innerHTML = `<p class="text-sm text-secondary">${error}</p>`;
+      return;
+    }
+
+    if (!metrics) {
+      this.metricsElements.grid.innerHTML = '<p class="text-sm text-secondary">Waiting for AI telemetry…</p>';
+      return;
+    }
+
+    const dataset = [
+      {
+        label: 'Active RFx',
+        value: formatNumber(metrics?.totals?.activeRfx),
+        trend: metrics?.trend?.activeRfx,
+      },
+      {
+        label: 'Open Opps',
+        value: formatNumber(metrics?.totals?.openOpportunities),
+        trend: metrics?.trend?.openOpportunities,
+      },
+      {
+        label: 'Vendor Coverage',
+        value: formatPercent(metrics?.totals?.vendorCoverage),
+        trend: metrics?.trend?.vendorCoverage,
+      },
+      {
+        label: 'Anomaly Alerts',
+        value: formatNumber(metrics?.totals?.anomalies),
+        trend: metrics?.trend?.anomalies,
+      },
+    ];
+
+    this.metricsElements.grid.innerHTML = dataset
+      .map(
+        (item) => `
+          <div class="map-metric">
+            <small>${item.label}</small>
+            <strong>${item.value}</strong>
+            <span class="metric-trend ${getTrendClass(item.trend)}">
+              ${getTrendLabel(item.trend)}
+            </span>
+          </div>
+        `,
+      )
+      .join('');
+
+    if (this.metricsElements.updated) {
+      const timestamp = metrics.updatedAt || new Date().toISOString();
+      this.metricsElements.updated.textContent = `Updated ${formatRelativeTime(timestamp)}`;
+    }
+  }
+
+  async refreshLiveMetrics(filters = this.filters) {
+    if (!this.metricsElements) {
+      return;
+    }
+    this.renderLiveMetrics(null, { loading: true });
+    try {
+      const metrics = await getLiveMapInsightMetrics(filters);
+      this.liveMetrics = metrics;
+      this.renderLiveMetrics(metrics);
+      this.setupRealtimeSubscription();
+    } catch (error) {
+      console.error('Failed to load live map metrics', error);
+      this.renderLiveMetrics(null, { error: 'Unable to load live metrics' });
+    }
+  }
+
+  setupRealtimeSubscription() {
+    if (this.unsubscribeRealtime) {
+      this.unsubscribeRealtime();
+      this.unsubscribeRealtime = null;
+    }
+
+    this.unsubscribeRealtime = subscribeToMapInsightUpdates((payload) => {
+      if (!payload) {
+        return;
+      }
+      const nextMetrics = mergeMetricsPayload(this.liveMetrics, payload.new || payload);
+      this.liveMetrics = nextMetrics;
+      this.renderLiveMetrics(this.liveMetrics);
+    });
+  }
+
   addLayer(layer) {
     if (this.map.getLayer(layer.id)) {
       this.map.removeLayer(layer.id);
@@ -213,6 +434,12 @@ export class MapAIOverlay {
 
   destroy() {
     window.removeEventListener('resize', this.handleResize);
+    this.panelElements?.refresh?.removeEventListener('click', this.handleRefreshClick);
+    this.metricsElements?.refresh?.removeEventListener('click', this.handleMetricRefresh);
+    if (this.unsubscribeRealtime) {
+      this.unsubscribeRealtime();
+      this.unsubscribeRealtime = null;
+    }
     [...this.layers.keys()].forEach((layerId) => this.removeLayer(layerId));
     this.hideTooltip();
   }
@@ -222,20 +449,90 @@ export function initAIOverlay(map) {
   return new MapAIOverlay(map);
 }
 
-function normalizePayload(payload) {
+function formatNumber(value) {
+  if (value === null || value === undefined) {
+    return '—';
+  }
+  const number = Number(value);
+  if (Number.isNaN(number)) {
+    return value;
+  }
+  if (number >= 1000) {
+    return `${Math.round(number).toLocaleString()}`;
+  }
+  return `${Math.round(number)}`;
+}
+
+function formatPercent(value) {
+  if (value === null || value === undefined) {
+    return '—';
+  }
+  const number = Number(value);
+  if (Number.isNaN(number)) {
+    return value;
+  }
+  return `${number.toFixed(1)}%`;
+}
+
+function getTrendClass(value) {
+  if (Number(value) > 0.1) return 'positive';
+  if (Number(value) < -0.1) return 'negative';
+  return 'neutral';
+}
+
+function getTrendLabel(value) {
+  if (value === null || value === undefined) {
+    return '—';
+  }
+  const number = Number(value);
+  if (Number.isNaN(number) || Math.abs(number) < 0.1) {
+    return 'Flat';
+  }
+  const direction = number > 0 ? 'Up' : 'Down';
+  return `${direction} ${Math.abs(number).toFixed(1)}%`;
+}
+
+function mergeMetricsPayload(current = {}, incoming = {}) {
+  const totals = incoming.totals || incoming.metrics || {};
+  return {
+    ...current,
+    region: incoming.region || current.region,
+    updatedAt: incoming.updatedAt || incoming.updated_at || incoming.captured_at || new Date().toISOString(),
+    totals: {
+      ...(current?.totals || {}),
+      ...totals,
+      activeRfx: totals.activeRfx ?? incoming.active_rfx ?? current?.totals?.activeRfx ?? 0,
+      openOpportunities:
+        totals.openOpportunities ?? incoming.open_opportunities ?? current?.totals?.openOpportunities ?? 0,
+      vendorCoverage: totals.vendorCoverage ?? incoming.vendor_coverage ?? current?.totals?.vendorCoverage ?? 0,
+      anomalies: totals.anomalies ?? incoming.anomaly_count ?? current?.totals?.anomalies ?? 0,
+    },
+    trend: {
+      ...(current?.trend || {}),
+      ...(incoming.trend || incoming.trends || {}),
+    },
+    hotspots: incoming.hotspots || current?.hotspots || [],
+    alerts: incoming.alerts || current?.alerts || [],
+  };
+}
+
+function normalizePayload(payload, overlays) {
   if (!payload) {
-    return { features: [], aiInsights: {} };
+    return { features: overlays?.features || [], aiInsights: overlays?.aiInsights || {} };
   }
 
   if (Array.isArray(payload)) {
     return {
       features: payload,
-      aiInsights: {},
+      aiInsights: overlays?.aiInsights || {},
     };
   }
 
-  const features = payload.features || payload.rfxData || [];
-  const aiInsights = payload.aiInsights || payload.ai || {};
+  const features = overlays?.features || payload.features || payload.rfxData || [];
+  const aiInsights = {
+    ...(payload.aiInsights || payload.ai || {}),
+    ...(overlays?.aiInsights || {}),
+  };
 
   return { features, aiInsights };
 }

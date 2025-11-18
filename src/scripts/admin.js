@@ -1,9 +1,12 @@
 import httpClient from '../services/httpClient.js';
-import { showError } from './shared.js';
+import { showError, formatRelativeTime } from './shared.js';
 import {
   getAdminAnalytics,
   getCachedAnalytics,
-  getRfxResponseAnalytics
+  getRfxResponseAnalytics,
+  getMapInsightSummary,
+  getLiveMapInsightMetrics,
+  subscribeToMapInsightUpdates
 } from '../services/analyticsService.js';
 
 class AdminDashboard {
@@ -16,6 +19,8 @@ class AdminDashboard {
       dateRange: '30days',
       searchQuery: ''
     };
+    this.unsubscribeMapMetrics = null;
+    this.currentMapMetrics = null;
 
     this.initializeEventListeners();
     this.loadDashboardData();
@@ -149,7 +154,9 @@ class AdminDashboard {
 
   async loadAiInsights() {
     try {
-      return await httpClient.get('/ai/insights');
+      const payload = await getMapInsightSummary({ region: 'global' });
+      this.initializeLiveMapMetrics(payload?.metrics);
+      return payload;
     } catch (error) {
       console.error('Error loading AI insights:', error);
       showError('Failed to load AI insights');
@@ -161,62 +168,76 @@ class AdminDashboard {
     if (!insights) return;
 
     // Update AI summary section
-    const summaryContainer = document.getElementById('ai-summary');
+    const summaryContainer = document.getElementById('ai-insights');
     if (summaryContainer) {
+      const bullets = insights.summary?.bullets || [];
       summaryContainer.innerHTML = `
-        <div class="card shadow-sm">
-          <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">AI-Powered Insights</h5>
-          </div>
-          <div class="card-body">
-            <div class="row">
-              <div class="col-md-6">
-                <h6>Trend Analysis</h6>
-                <p>${insights.trendAnalysis || 'No trend data available'}</p>
-                
-                <h6 class="mt-3">Top Opportunities</h6>
-                <ul class="list-unstyled">
-                  ${(insights.topOpportunities || []).map(opp => 
-                    `<li class="mb-2">
-                      <i class="fas fa-arrow-circle-right text-primary me-2"></i>
-                      ${opp}
-                    </li>`
-                  ).join('')}
-                </ul>
-              </div>
-              <div class="col-md-6">
-                <h6>Performance Metrics</h6>
-                <div class="mb-3">
-                  <div class="d-flex justify-content-between mb-1">
-                    <span>Match Accuracy</span>
-                    <strong>${insights.matchAccuracy || 0}%</strong>
-                  </div>
-                  <div class="progress" style="height: 10px;">
-                    <div class="progress-bar bg-success" role="progressbar" 
-                         style="width: ${insights.matchAccuracy || 0}%" 
-                         aria-valuenow="${insights.matchAccuracy || 0}" 
-                         aria-valuemin="0" 
-                         aria-valuemax="100"></div>
-                  </div>
-                </div>
-                
-                <h6 class="mt-4">AI Recommendations</h6>
-                <div class="alert alert-info">
-                  ${insights.recommendations || 'No specific recommendations at this time.'}
-                </div>
-              </div>
+        <div class="surface-card">
+          <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+              <p class="text-xs text-secondary mb-1">Region ${insights.region || 'global'}</p>
+              <h5 class="mb-1">${insights.summary?.text || 'AI summary unavailable'}</h5>
+              <p class="text-sm text-secondary mb-0">${insights.overlays?.hotspots?.length || 0} hotspots · ${insights.metrics?.totals?.anomalies || 0} alerts</p>
             </div>
-            
-            ${insights.anomalies ? `
-              <div class="alert alert-warning mt-3">
-                <h6><i class="fas fa-exclamation-triangle me-2"></i>Anomaly Detected</h6>
-                <p class="mb-0">${insights.anomalies}</p>
-              </div>
-            ` : ''}
+            <span class="badge bg-primary-subtle text-primary">${(insights.summary?.provider || 'system').toUpperCase()}</span>
           </div>
+          <ul class="insight-list mb-4">
+            ${bullets.length ? bullets.map((item) => `<li>${item}</li>`).join('') : '<li>No AI highlights available.</li>'}
+          </ul>
+          <div id="map-live-metrics"></div>
         </div>
       `;
+      this.renderLiveMapMetrics(insights.metrics);
     }
+  }
+
+  async initializeLiveMapMetrics(initialMetrics) {
+    this.renderLiveMapMetrics(initialMetrics);
+    try {
+      const latest = await getLiveMapInsightMetrics({ region: 'global' });
+      this.currentMapMetrics = latest;
+      this.renderLiveMapMetrics(latest);
+    } catch (error) {
+      console.warn('Unable to refresh live map metrics', error);
+    }
+
+    if (this.unsubscribeMapMetrics) {
+      this.unsubscribeMapMetrics();
+    }
+
+    this.unsubscribeMapMetrics = subscribeToMapInsightUpdates((payload) => {
+      this.currentMapMetrics = mergeMetricSnapshots(this.currentMapMetrics, payload?.new || payload);
+      this.renderLiveMapMetrics(this.currentMapMetrics);
+    });
+  }
+
+  renderLiveMapMetrics(metrics) {
+    const container = document.getElementById('map-live-metrics');
+    if (!container) return;
+
+    if (!metrics) {
+      container.innerHTML = '<p class="text-sm text-secondary mb-0">Live map telemetry is syncing…</p>';
+      return;
+    }
+
+    const items = [
+      { label: 'Active RFx', value: formatMetricValue(metrics?.totals?.activeRfx) },
+      { label: 'Open Opps', value: formatMetricValue(metrics?.totals?.openOpportunities) },
+      { label: 'Vendor Coverage', value: formatMetricPercent(metrics?.totals?.vendorCoverage) },
+      { label: 'Anomaly Alerts', value: formatMetricValue(metrics?.totals?.anomalies) }
+    ];
+
+    container.innerHTML = `
+      <div class="metric-grid">
+        ${items.map((item) => `
+          <div class="metric-card">
+            <small>${item.label}</small>
+            <strong>${item.value}</strong>
+          </div>
+        `).join('')}
+      </div>
+      <p class="text-xs text-secondary mt-3 mb-0">Updated ${formatRelativeTime(metrics.updatedAt || new Date().toISOString())}</p>
+    `;
   }
 
   renderMetrics(metrics) {
@@ -541,3 +562,35 @@ document.addEventListener('DOMContentLoaded', () => {
     window.adminDashboard = new AdminDashboard();
   }
 });
+
+function mergeMetricSnapshots(current = {}, incoming = {}) {
+  if (!incoming) return current;
+  const totals = incoming.totals || incoming.metrics || {};
+  return {
+    ...current,
+    ...incoming,
+    totals: {
+      ...(current?.totals || {}),
+      ...totals,
+      activeRfx: totals.activeRfx ?? incoming.active_rfx ?? current?.totals?.activeRfx ?? 0,
+      openOpportunities: totals.openOpportunities ?? incoming.open_opportunities ?? current?.totals?.openOpportunities ?? 0,
+      vendorCoverage: totals.vendorCoverage ?? incoming.vendor_coverage ?? current?.totals?.vendorCoverage ?? 0,
+      anomalies: totals.anomalies ?? incoming.anomaly_count ?? current?.totals?.anomalies ?? 0
+    },
+    updatedAt: incoming.updatedAt || incoming.updated_at || incoming.captured_at || new Date().toISOString()
+  };
+}
+
+function formatMetricValue(value) {
+  if (value === null || value === undefined) return '—';
+  const number = Number(value);
+  if (Number.isNaN(number)) return value;
+  return number.toLocaleString();
+}
+
+function formatMetricPercent(value) {
+  if (value === null || value === undefined) return '—';
+  const number = Number(value);
+  if (Number.isNaN(number)) return value;
+  return `${number.toFixed(1)}%`;
+}

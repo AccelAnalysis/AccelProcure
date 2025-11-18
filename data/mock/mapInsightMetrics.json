@@ -1,0 +1,34 @@
+[
+  {
+    "region": "global",
+    "captured_at": "2024-06-01T12:00:00.000Z",
+    "totals": {
+      "activeRfx": 128,
+      "openOpportunities": 52,
+      "vendorCoverage": 72.5,
+      "anomalies": 3
+    },
+    "trend": {
+      "activeRfx": 0.12,
+      "openOpportunities": -0.03,
+      "vendorCoverage": 0.02,
+      "anomalies": 0.01
+    },
+    "hotspots": [
+      { "name": "Seattle Logistics", "score": 0.91, "centroid": [-122.33, 47.61] }
+    ],
+    "alerts": [
+      { "message": "Duplicate vendor responses", "severity": 0.6 }
+    ]
+  },
+  {
+    "region": "global",
+    "captured_at": "2024-05-25T12:00:00.000Z",
+    "totals": {
+      "activeRfx": 114,
+      "openOpportunities": 58,
+      "vendorCoverage": 69.9,
+      "anomalies": 4
+    }
+  }
+]

@@ -272,3 +272,35 @@
     margin-right: 8px;
     flex-shrink: 0;
 }
+
+/* Live metrics overlay (shared with global styles) */
+.map-ai-panel,
+.map-metrics-panel {
+    font-family: var(--font-sans, 'Inter', sans-serif);
+    background: rgba(10, 25, 41, 0.92);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.65);
+}
+
+.map-ai-panel h3,
+.map-metrics-panel h3 {
+    color: #bae6fd;
+}
+
+.map-ai-panel .insight-list li::before {
+    background: linear-gradient(135deg, #38bdf8, #f97316);
+}
+
+.map-metric {
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.16), rgba(14, 165, 233, 0));
+    border-color: rgba(14, 165, 233, 0.35);
+}
+
+.map-metric strong {
+    color: #f0f9ff;
+}
+
+#map-tooltip {
+    font-size: 0.875rem;
+    pointer-events: none;
+}

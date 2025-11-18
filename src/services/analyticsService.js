@@ -1,5 +1,8 @@
-import { supabase } from './supabaseClient';
+import { supabase } from '../config/supabaseClient.js';
+import httpClient from './httpClient';
 import { getCurrentUser } from './authService';
+
+const MAP_INSIGHTS_ENDPOINT = '/ai/map-insights';
 
 /**
  * Fetches analytics data for the admin dashboard
@@ -8,7 +11,7 @@ import { getCurrentUser } from './authService';
 export const getAdminAnalytics = async () => {
   try {
     // Verify admin access
-    const user = getCurrentUser();
+    const { user } = await getCurrentUser();
     if (!user || !user.isAdmin) {
       throw new Error('Unauthorized: Admin access required');
     }
@@ -90,6 +93,12 @@ export const getAIModelAnalytics = async () => {
     throw error;
   }
 };
+
+export const getMapInsightSummary = async (filters = {}) =>
+  httpClient.get(MAP_INSIGHTS_ENDPOINT, { params: filters });
+
+export const getLiveMapInsightMetrics = async (filters = {}) =>
+  httpClient.get(`${MAP_INSIGHTS_ENDPOINT}/metrics`, { params: filters });
 
 // Helper functions
 const calculateAverageScore = (data, field) => {
@@ -186,12 +195,41 @@ export const subscribeToAnalyticsUpdates = (callback) => {
   };
 };
 
+export const subscribeToMapInsightUpdates = (callback) => {
+  if (!supabase) {
+    return () => {};
+  }
+
+  const subscription = supabase
+    .channel('map_insight_updates')
+    .on('postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'map_insight_metrics'
+      },
+      (payload) => {
+        if (typeof callback === 'function') {
+          callback(payload);
+        }
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(subscription);
+  };
+};
+
 // Export all functions
 export default {
   getAdminAnalytics,
   getRfxResponseAnalytics,
   getAIModelAnalytics,
+  getMapInsightSummary,
+  getLiveMapInsightMetrics,
   getCachedAnalytics,
   subscribeToAnalyticsUpdates,
+  subscribeToMapInsightUpdates,
   withAnalyticsErrorHandling
 };

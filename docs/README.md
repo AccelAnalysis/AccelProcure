@@ -26,3 +26,7 @@ npx jest src/services/__tests__/services.test.js
 ```
 
 If you encounter network-restriction errors (for example, private registries or offline CI runners), mirror the dependencies in an internal registry or use a package manager cache (`npm config set cache <path>` and seed it from an environment with internet access). Once the packages are available locally, rerun `npm install` and then `npm test`.
+
+## Live map insight references
+
+* [`docs/LIVE_MAP_INSIGHTS.md`](./LIVE_MAP_INSIGHTS.md) documents how the `/ai/map-insights` endpoints, schemas, and mock payloads connect to the new overlay/metrics components in the UI.

@@ -1,178 +1,263 @@
-/* Main Layout */
-:root {
-  --primary: #0056b3;
-  --primary-dark: #003d7a;
-  --secondary: #6c757d;
-  --success: #28a745;
-  --danger: #dc3545;
-  --warning: #ffc107;
-  --light: #f8f9fa;
-  --dark: #343a40;
-  --gray-100: #f8f9fa;
-  --gray-200: #e9ecef;
-  --gray-300: #dee2e6;
-  --gray-400: #ced4da;
-  --gray-500: #adb5bd;
-  --gray-600: #6c757d;
-  --gray-700: #495057;
-  --gray-800: #343a40;
-  --gray-900: #212529;
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
-  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --radius: 0.375rem;
-  --transition: all 0.2s ease-in-out;
-}
+@import './theme.css';
 
-* {
-  margin: 0;
-  padding: 0;
+/* Global Layout */
+*, *::before, *::after {
   box-sizing: border-box;
 }
 
 html, body {
   height: 100%;
   margin: 0;
-  padding: 0;
   font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  color: var(--gray-800);
-  background-color: #f5f7fa;
-  line-height: 1.5;
+  color: var(--color-text);
+  background-color: var(--color-background);
+  line-height: var(--line-height-normal);
 }
 
-#app {
+body {
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
 }
 
-/* Map Container */
-#map-container {
-  position: relative;
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+main {
   flex: 1;
-  height: calc(100vh - 60px);
+}
+
+#app, .app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Map + Layout Shell */
+#map-container,
+main .map-wrapper,
+main #map {
+  position: relative;
   width: 100%;
-  overflow: hidden;
-  background-color: #f0f2f5;
-  transition: var(--transition);
+}
+
+#map-container,
+main .map-wrapper {
+  flex: 1;
+  min-height: calc(100vh - 120px);
+  background: radial-gradient(circle at top, rgba(0, 86, 179, 0.1), transparent 45%),
+    var(--color-background);
 }
 
 #map {
+  inset: 0;
   position: absolute;
-  top: 0;
-  left: 0;
   width: 100%;
   height: 100%;
 }
 
-/* Map Controls */
-.map-controls {
+/* Map Tooltip */
+.map-tooltip {
   position: absolute;
-  top: 20px;
-  right: 20px;
-  z-index: 1000;
+  min-width: 180px;
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: rgba(15, 23, 42, 0.9);
+  color: #fff;
+  pointer-events: none;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+  transform: translate3d(0, 0, 0);
+  z-index: 30;
+}
+
+.map-tooltip.hidden {
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* Map Overlay Panels */
+.map-overlay,
+.map-ai-panel,
+.map-metrics-panel {
+  position: absolute;
+  z-index: 20;
+  top: var(--space-6);
+  right: var(--space-6);
+  max-width: 340px;
+  background: rgba(15, 23, 42, 0.86);
+  color: #fff;
+  border-radius: var(--radius-xl);
+  padding: var(--space-5);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: var(--shadow-2xl);
+  backdrop-filter: blur(18px);
+}
+
+.map-ai-panel {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-4);
 }
 
-.map-control-button {
-  background: white;
+.map-ai-panel header,
+.map-metrics-panel header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.map-ai-panel header h3,
+.map-metrics-panel header h3 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+}
+
+.map-ai-panel button,
+.map-metrics-panel button {
   border: none;
-  border-radius: var(--radius);
-  width: 40px;
-  height: 40px;
-  box-shadow: var(--shadow);
+  background: rgba(255, 255, 255, 0.1);
+  color: inherit;
+  border-radius: var(--radius-full);
+  padding: var(--space-2) var(--space-3);
   cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.map-ai-panel button:hover,
+.map-metrics-panel button:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.insight-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--gray-700);
-  transition: var(--transition);
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
-.map-control-button:hover {
-  background: var(--gray-100);
-  color: var(--primary);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-}
-
-/* Map Tooltip */
-.mapboxgl-popup {
-  max-width: 300px;
-  font: 14px/20px var(--font-sans);
-  z-index: 10;
-}
-
-.mapboxgl-popup-content {
-  padding: 15px;
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-md);
-  border: 1px solid var(--gray-200);
-}
-
-/* Loading State */
-.loading-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(255, 255, 255, 0.8);
+.insight-list li {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  backdrop-filter: blur(2px);
+  gap: var(--space-3);
+  align-items: flex-start;
+  font-size: var(--font-size-sm);
 }
 
-/* Responsive Adjustments */
-@media (max-width: 768px) {
-  #map-container {
-    height: calc(100vh - 50px);
-  }
-  
-  .map-controls {
-    top: 10px;
-    right: 10px;
-  }
-  
-  .map-control-button {
-    width: 36px;
-    height: 36px;
-  }
-}
-
-/* Animation for map elements */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.map-feature {
-  animation: fadeIn 0.3s ease-out forwards;
-}
-
-/* Custom scrollbar for map popups */
-::-webkit-scrollbar {
+.insight-list li::before {
+  content: '';
   width: 8px;
   height: 8px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  margin-top: var(--space-2);
+  flex-shrink: 0;
 }
 
-::-webkit-scrollbar-track {
-  background: var(--gray-100);
-  border-radius: 4px;
+.map-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--space-3);
 }
 
-::-webkit-scrollbar-thumb {
-  background: var(--gray-400);
-  border-radius: 4px;
+.map-metric {
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  background: rgba(15, 118, 110, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  text-align: left;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: var(--gray-500);
+.map-metric small {
+  display: block;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: var(--font-size-xs);
+  opacity: 0.8;
+}
+
+.map-metric strong {
+  font-size: var(--font-size-xl);
+  display: block;
+}
+
+.metric-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-xs);
+  margin-top: var(--space-1);
+}
+
+.metric-trend.positive {
+  color: var(--color-success);
+}
+
+.metric-trend.negative {
+  color: var(--color-error);
+}
+
+.metric-trend.neutral {
+  color: var(--color-text-secondary);
+}
+
+/* Loading Overlay */
+.loading-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(248, 250, 252, 0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  z-index: 25;
+}
+
+.loading-overlay .spinner {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 3px solid rgba(15, 23, 42, 0.2);
+  border-top-color: var(--color-primary);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Responsive Tweaks */
+@media (max-width: 1024px) {
+  .map-overlay,
+  .map-ai-panel,
+  .map-metrics-panel {
+    position: relative;
+    top: 0;
+    right: 0;
+    margin: var(--space-4) auto;
+    width: min(100% - var(--space-6), 520px);
+  }
+}
+
+@media (max-width: 640px) {
+  #map-container,
+  main .map-wrapper {
+    min-height: 420px;
+  }
+
+  .map-metrics-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+
+  .map-ai-panel,
+  .map-metrics-panel {
+    padding: var(--space-4);
+  }
 }
