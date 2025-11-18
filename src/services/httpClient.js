@@ -98,6 +98,24 @@ const parseResponse = async (response) => {
   return response.text();
 };
 
+let unauthorizedHandler = null;
+
+export const setUnauthorizedHandler = (handler) => {
+  unauthorizedHandler = typeof handler === 'function' ? handler : null;
+};
+
+const handleUnauthorized = () => {
+  if (unauthorizedHandler) {
+    try {
+      unauthorizedHandler();
+      return;
+    } catch (error) {
+      console.error('Unauthorized handler failed', error);
+    }
+  }
+  clearAuthToken();
+};
+
 const request = async (method, path, options = {}) => {
   const { data, params, headers = {}, auth = true, signal } = options;
   const url = buildUrl(path, params);
@@ -130,7 +148,7 @@ const request = async (method, path, options = {}) => {
 
   if (!response.ok) {
     if (response.status === 401) {
-      clearAuthToken();
+      handleUnauthorized();
     }
     const message = payload?.message || payload?.error || response.statusText || 'Request failed';
     throw new ApiError(message, { status: response.status, body: payload });
@@ -155,9 +173,19 @@ const httpClient = {
   setAuthToken,
   getAuthToken,
   clearAuthToken,
+  setUnauthorizedHandler,
   TOKEN_STORAGE_KEY,
   ApiError
 };
 
-export { request, get, post, put, patch, del as deleteRequest, TOKEN_STORAGE_KEY };
+export {
+  request,
+  get,
+  post,
+  put,
+  patch,
+  del as deleteRequest,
+  TOKEN_STORAGE_KEY,
+  setUnauthorizedHandler
+};
 export default httpClient;
