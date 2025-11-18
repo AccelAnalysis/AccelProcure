@@ -1,139 +1,141 @@
-import { 
-  signIn, 
-  signUp, 
-  signOut, 
-  getCurrentUser, 
-  resetPassword, 
-  updatePassword,
-  onAuthStateChanged
+import {
+  getCurrentUser,
+  onAuthStateChanged,
 } from '../services/authService.js';
 import { initMap } from './map3d.js';
 import { setupNavigation, updateNavigation } from './nav.js';
-import { showToast } from '../utils/notifications.js';
+import { showError } from './shared.js';
 
 class App {
   constructor() {
     this.currentUser = null;
-    this.map = null;
-    this.initialized = false;
-    this.authStateListeners = [];
+    this.mapController = null;
+    this.navigation = null;
+    this.hasInitialized = false;
   }
 
   async initialize() {
     try {
-      // Initialize services
-      await this.initializeServices();
-      
-      // Setup UI components
-      this.setupEventListeners();
-      setupNavigation();
-      
-      // Initialize map if on map page
-      if (document.getElementById('map')) {
-        this.map = await initMap();
-      }
-      
-      // Update UI based on auth state
+      this.navigation = setupNavigation();
+      this.setupGlobalHandlers();
+      await this.bootstrapAuthState();
+      await this.initializeMap();
       this.updateUI();
-      
-      this.initialized = true;
-      console.log('App initialized successfully');
+      this.hasInitialized = true;
+      document.dispatchEvent(new CustomEvent('app:ready'));
     } catch (error) {
-      console.error('Failed to initialize app:', error);
-      showToast('Failed to initialize application', 'error');
+      console.error('Failed to initialize app', error);
+      showError('Unable to load AccelRFx. Please refresh and try again.');
     }
   }
 
-  async initializeServices() {
-    try {
-      // Initialize auth state
-      const { user, error } = await getCurrentUser();
-      if (error) throw error;
-      this.currentUser = user;
-      
-      // Set up auth state listener
-      onAuthStateChanged((user) => {
-        this.currentUser = user;
-        this.notifyAuthStateChanged(user);
-        this.updateUI();
-        
-        // If we have a user and we're on the map page, refresh map data
-        if (user && this.map) {
-          this.map.refreshData();
-        }
-      });
-      
-    } catch (error) {
-      console.error('Failed to initialize services:', error);
-      throw error;
-    }
-  }
-
-  setupEventListeners() {
-    // Global error handling
-    window.addEventListener('error', (event) => {
-      console.error('Unhandled error:', event.error);
-      showToast('An unexpected error occurred', 'error');
-    });
-
-    // Handle offline/online status
+  setupGlobalHandlers() {
     window.addEventListener('online', () => {
-      showToast('You are back online', 'success');
-      // Refresh data when coming back online
-      if (this.map) this.map.refreshData();
+      document.body.dataset.network = 'online';
+      if (this.mapController) {
+        this.mapController.refreshData();
+      }
     });
 
     window.addEventListener('offline', () => {
-      showToast('You are offline. Some features may be limited.', 'warning');
+      document.body.dataset.network = 'offline';
+      showError('You are offline. Some functionality may be limited.');
+    });
+
+    window.addEventListener('visibilitychange', () => {
+      if (!document.hidden && this.mapController) {
+        this.mapController.refreshData();
+      }
     });
   }
 
-  updateUI() {
-    // Update navigation based on auth state
-    updateNavigation(this.currentUser);
-    
-    // Update page-specific UIs
-    this.updateAuthDependentUI();
+  async bootstrapAuthState() {
+    const { user, error } = await getCurrentUser();
+    if (error) {
+      throw error;
+    }
+
+    this.currentUser = user;
+    onAuthStateChanged((authUser) => {
+      this.currentUser = authUser;
+      this.updateUI();
+      if (this.mapController && this.hasInitialized) {
+        this.mapController.refreshData(this.buildMapFilters());
+      }
+    });
   }
 
-  updateAuthDependentUI() {
-    const authElements = document.querySelectorAll('[data-auth]');
-    const guestElements = document.querySelectorAll('[data-guest]');
-    const userElements = document.querySelectorAll('[data-user]');
-    
+  async initializeMap() {
+    const container = document.getElementById('map');
+    if (!container) {
+      return;
+    }
+
+    this.mapController = await initMap({
+      containerId: 'map',
+      filters: this.buildMapFilters(),
+    });
+  }
+
+  buildMapFilters() {
+    if (!this.currentUser) {
+      return { status: 'active' };
+    }
+
+    const filters = { status: 'active' };
+    if (this.currentUser.region) {
+      filters.region = this.currentUser.region;
+    }
+    if (this.currentUser.industry) {
+      filters.industry = this.currentUser.industry;
+    }
+    return filters;
+  }
+
+  updateUI() {
+    updateNavigation(this.currentUser);
+    document.body.dataset.auth = this.currentUser ? 'authenticated' : 'guest';
+    this.updateAuthBlocks();
+  }
+
+  updateAuthBlocks() {
+    const authed = document.querySelectorAll('[data-auth]');
+    const guests = document.querySelectorAll('[data-guest]');
+    const userLabels = document.querySelectorAll('[data-user-name]');
+    const creditLabels = document.querySelectorAll('[data-user-credits]');
+
     if (this.currentUser) {
-      // User is logged in
-      authElements.forEach(el => el.classList.remove('hidden'));
-      guestElements.forEach(el => el.classList.add('hidden'));
-      userElements.forEach(el => {
-        el.textContent = this.currentUser.email || 'User';
-        el.classList.remove('hidden');
+      authed.forEach((el) => el.classList.remove('hidden'));
+      guests.forEach((el) => el.classList.add('hidden'));
+      userLabels.forEach((el) => {
+        el.textContent = this.currentUser.name || this.currentUser.email || 'Account';
       });
-      
-      // Update any elements that should show user data
-      const userCreditElements = document.querySelectorAll('[data-user-credits]');
-      if (this.currentUser.credits !== undefined) {
-        userCreditElements.forEach(el => {
+      if (typeof this.currentUser.credits === 'number') {
+        creditLabels.forEach((el) => {
           el.textContent = this.currentUser.credits.toLocaleString();
         });
       }
     } else {
-      // User is not logged in
-      authElements.forEach(el => el.classList.add('hidden'));
-      guestElements.forEach(el => el.classList.remove('hidden'));
-      userElements.forEach(el => el.classList.add('hidden'));
+      authed.forEach((el) => el.classList.add('hidden'));
+      guests.forEach((el) => el.classList.remove('hidden'));
+      userLabels.forEach((el) => {
+        el.textContent = '';
+      });
+      creditLabels.forEach((el) => {
+        el.textContent = '0';
+      });
     }
   }
 }
 
-// Initialize app when DOM is fully loaded
-document.addEventListener('DOMContentLoaded', () => {
+export function initializeApp() {
   const app = new App();
-  window.app = app; // Make app globally available for debugging
-  app.initialize().catch(console.error);
+  window.app = app;
+  return app.initialize();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initializeApp();
 });
 
-// Export for testing
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { App };
-}
+export default App;

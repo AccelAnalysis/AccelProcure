@@ -1,5 +1,5 @@
 import { authService } from '../services/authService.js';
-import { showToast } from './shared.js';
+import { showError } from './shared.js';
 
 class Navigation {
   constructor() {
@@ -14,6 +14,7 @@ class Navigation {
     this.navLinks = document.querySelectorAll('.nav-link');
     this.notificationCount = document.querySelector('.notification-count');
     this.notificationList = document.querySelector('.notification-list');
+    this.signOutButtons = document.querySelectorAll('[data-sign-out]');
     
     this.init();
   }
@@ -28,7 +29,7 @@ class Navigation {
     // Drawer toggle
     if (this.drawerToggle) {
       this.drawerToggle.addEventListener('click', () => this.toggleDrawer());
-      this.drawerBackdrop.addEventListener('click', () => this.closeDrawer());
+      this.drawerBackdrop?.addEventListener('click', () => this.closeDrawer());
     }
 
     // Notification bell
@@ -56,10 +57,10 @@ class Navigation {
 
     // Close menus when clicking outside
     document.addEventListener('click', (e) => {
-      if (this.notificationPanel && !this.notificationPanel.contains(e.target) && !this.notificationBell.contains(e.target)) {
+      if (this.notificationPanel && !this.notificationPanel.contains(e.target) && !this.notificationBell?.contains(e.target)) {
         this.notificationPanel.classList.remove('active');
       }
-      if (this.userMenu && !this.userMenu.contains(e.target) && !this.userMenuToggle.contains(e.target)) {
+      if (this.userMenu && !this.userMenu.contains(e.target) && !this.userMenuToggle?.contains(e.target)) {
         this.userMenu.classList.remove('active');
       }
     });
@@ -75,17 +76,21 @@ class Navigation {
 
     // Handle window resize
     window.addEventListener('resize', this.handleResize.bind(this));
+
+    this.signOutButtons.forEach((button) => {
+      button.addEventListener('click', (event) => this.handleSignOut(event));
+    });
   }
 
   toggleDrawer() {
-    this.drawer.classList.toggle('open');
-    this.drawerBackdrop.classList.toggle('active');
+    this.drawer?.classList.toggle('open');
+    this.drawerBackdrop?.classList.toggle('active');
     document.body.classList.toggle('drawer-open');
   }
 
   closeDrawer() {
-    this.drawer.classList.remove('open');
-    this.drawerBackdrop.classList.remove('active');
+    this.drawer?.classList.remove('open');
+    this.drawerBackdrop?.classList.remove('active');
     document.body.classList.remove('drawer-open');
   }
 
@@ -117,7 +122,7 @@ class Navigation {
       this.renderNotifications(mockNotifications);
     } catch (error) {
       console.error('Error loading notifications:', error);
-      showToast('Failed to load notifications', 'error');
+      showError('Failed to load notifications');
     }
   }
 
@@ -250,14 +255,68 @@ class Navigation {
     // For now, we'll just reload all notifications
     this.loadNotifications();
   }
+
+  async handleSignOut(event) {
+    if (event) {
+      event.preventDefault();
+    }
+    try {
+      await authService.signOut();
+      window.location.href = '/login.html';
+    } catch (error) {
+      console.error('Failed to sign out:', error);
+      showError('Unable to sign out at this time');
+    }
+  }
 }
 
 // Initialize navigation when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-  // Only initialize if we're on a page with navigation
   if (document.querySelector('.app-header')) {
-    window.navigation = new Navigation();
+    window.navigation = setupNavigation();
   }
 });
+
+let navigationInstance = null;
+
+export function setupNavigation() {
+  if (navigationInstance) {
+    return navigationInstance;
+  }
+
+  if (!document.querySelector('.app-header')) {
+    return null;
+  }
+
+  navigationInstance = new Navigation();
+  return navigationInstance;
+}
+
+export function updateNavigation(user) {
+  const instance = navigationInstance || setupNavigation();
+  if (instance) {
+    instance.updateAuthState(user);
+  }
+}
+
+Navigation.prototype.updateAuthState = function updateAuthState(user) {
+  const authedLinks = document.querySelectorAll('[data-nav-auth]');
+  const guestLinks = document.querySelectorAll('[data-nav-guest]');
+  const avatarLabel = document.querySelector('[data-nav-user]');
+
+  if (user) {
+    authedLinks.forEach((el) => el.classList.remove('hidden'));
+    guestLinks.forEach((el) => el.classList.add('hidden'));
+    if (avatarLabel) {
+      avatarLabel.textContent = user.name || user.email || 'Account';
+    }
+  } else {
+    authedLinks.forEach((el) => el.classList.add('hidden'));
+    guestLinks.forEach((el) => el.classList.remove('hidden'));
+    if (avatarLabel) {
+      avatarLabel.textContent = 'Sign in';
+    }
+  }
+};
 
 export default Navigation;
