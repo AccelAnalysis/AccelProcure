@@ -1,132 +1,143 @@
-import { createClient } from '@supabase/supabase-js';
-import { supabaseUrl, supabaseAnonKey } from '../config/auth.config';
+import httpClient, { getAuthToken, setAuthToken, clearAuthToken } from './httpClient';
 
-// Initialize Supabase client
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const AUTH_BASE = '/auth';
+let currentUser = null;
+const authListeners = new Set();
+let inFlightProfilePromise = null;
 
-/**
- * Signs up a new user with email and password
- * @param {string} email - User's email
- * @param {string} password - User's password
- * @returns {Promise<{user: object, session: object, error: Error}>} - User and session data or error
- */
-export const signUp = async (email, password) => {
-  try {
-    const { user, session, error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-    
-    if (error) throw error;
-    return { user, session, error: null };
-  } catch (error) {
-    console.error('Error signing up:', error.message);
-    return { user: null, session: null, error };
-  }
+const notifyAuthListeners = () => {
+  authListeners.forEach((listener) => {
+    try {
+      listener(currentUser);
+    } catch (error) {
+      console.error('Auth listener error', error);
+    }
+  });
 };
 
-/**
- * Signs in a user with email and password
- * @param {string} email - User's email
- * @param {string} password - User's password
- * @returns {Promise<{user: object, session: object, error: Error}>} - User and session data or error
- */
+const persistSession = (payload = {}) => {
+  if (payload?.token) {
+    setAuthToken(payload.token);
+  }
+  currentUser = payload?.user ?? null;
+  notifyAuthListeners();
+  return { user: currentUser, token: payload?.token ?? getAuthToken() };
+};
+
+export const clearSession = () => {
+  currentUser = null;
+  clearAuthToken();
+  notifyAuthListeners();
+};
+
 export const signIn = async (email, password) => {
-  try {
-    const { user, session, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    
-    if (error) throw error;
-    return { user, session, error: null };
-  } catch (error) {
-    console.error('Error signing in:', error.message);
-    return { user: null, session: null, error };
+  if (!email || !password) {
+    throw new Error('Email and password are required');
   }
+
+  const payload = await httpClient.post(`${AUTH_BASE}/login`, { email, password }, { auth: false });
+  return persistSession(payload);
 };
 
-/**
- * Signs out the current user
- * @returns {Promise<{error: Error}>} - Error if any
- */
+export const signUp = async (email, password, profile = {}) => {
+  if (!email || !password) {
+    throw new Error('Email and password are required');
+  }
+
+  const payload = await httpClient.post(
+    `${AUTH_BASE}/register`,
+    { email, password, ...profile },
+    { auth: false }
+  );
+
+  return persistSession(payload);
+};
+
 export const signOut = async () => {
   try {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
-    return { error: null };
+    await httpClient.post(`${AUTH_BASE}/logout`);
   } catch (error) {
-    console.error('Error signing out:', error.message);
-    return { error };
+    console.warn('Logout request failed, clearing session locally', error);
+  } finally {
+    clearSession();
   }
 };
 
-/**
- * Gets the current authenticated user
- * @returns {Promise<{user: object, error: Error}>} - Current user data or error
- */
-export const getCurrentUser = async () => {
+export const getCurrentUser = async ({ forceRefresh = false } = {}) => {
+  if (!forceRefresh && currentUser) {
+    return { user: currentUser, error: null };
+  }
+
+  if (!getAuthToken()) {
+    return { user: null, error: null };
+  }
+
+  if (!inFlightProfilePromise) {
+    inFlightProfilePromise = httpClient
+      .get(`${AUTH_BASE}/me`)
+      .then((user) => {
+        currentUser = user;
+        notifyAuthListeners();
+        return user;
+      })
+      .catch((error) => {
+        clearSession();
+        throw error;
+      })
+      .finally(() => {
+        inFlightProfilePromise = null;
+      });
+  }
+
   try {
-    const { data: { user }, error } = await supabase.auth.getUser();
-    
-    if (error) throw error;
+    const user = await inFlightProfilePromise;
     return { user, error: null };
   } catch (error) {
-    console.error('Error getting current user:', error.message);
     return { user: null, error };
   }
 };
 
-/**
- * Sends a password reset email
- * @param {string} email - User's email
- * @returns {Promise<{data: object, error: Error}>} - Response data or error
- */
 export const resetPassword = async (email) => {
-  try {
-    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    
-    if (error) throw error;
-    return { data, error: null };
-  } catch (error) {
-    console.error('Error resetting password:', error.message);
-    return { data: null, error };
+  if (!email) {
+    throw new Error('Email is required');
   }
+  return httpClient.post(`${AUTH_BASE}/password/reset`, { email }, { auth: false });
 };
 
-/**
- * Updates the user's password
- * @param {string} newPassword - New password
- * @returns {Promise<{data: object, error: Error}>} - Response data or error
- */
 export const updatePassword = async (newPassword) => {
-  try {
-    const { data, error } = await supabase.auth.updateUser({
-      password: newPassword,
-    });
-    
-    if (error) throw error;
-    return { data, error: null };
-  } catch (error) {
-    console.error('Error updating password:', error.message);
-    return { data: null, error };
+  if (!newPassword) {
+    throw new Error('New password is required');
   }
+  return httpClient.post(`${AUTH_BASE}/password/update`, { password: newPassword });
 };
 
-// Listen for auth state changes
-supabase.auth.onAuthStateChange((event, session) => {
-  console.log('Auth state changed:', event, session);
-  // You can add additional logic here for handling auth state changes
-});
+export const isAuthenticated = () => Boolean(currentUser || getAuthToken());
 
-export default {
-  signUp,
+export const onAuthStateChanged = (callback) => {
+  if (typeof callback !== 'function') {
+    return () => {};
+  }
+
+  authListeners.add(callback);
+  callback(currentUser);
+  return () => {
+    authListeners.delete(callback);
+  };
+};
+
+export const authService = {
   signIn,
+  signUp,
   signOut,
   getCurrentUser,
   resetPassword,
   updatePassword,
-  supabase, // Export the client for direct access if needed
+  onAuthStateChanged,
+  isAuthenticated,
+  clearSession,
+  get token() {
+    return getAuthToken();
+  }
 };
+
+export default authService;
