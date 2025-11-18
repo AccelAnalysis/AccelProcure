@@ -1,9 +1,10 @@
-import { rfxService } from '../services/rfxService.js';
-import { profileService } from '../services/profileService.js';
-import { creditService } from '../services/creditService.js';
-import { aiService } from '../services/aiService.js';
-import { showToast } from './shared.js';
-import { analyticsService } from '../services/analyticsService.js';
+import httpClient from '../services/httpClient.js';
+import { showError } from './shared.js';
+import {
+  getAdminAnalytics,
+  getCachedAnalytics,
+  getRfxResponseAnalytics
+} from '../services/analyticsService.js';
 
 class AdminDashboard {
   constructor() {
@@ -95,19 +96,26 @@ class AdminDashboard {
       this.renderAiInsights(aiInsights);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
-      showToast('Failed to load dashboard data', 'error');
+      showError('Failed to load dashboard data');
     }
   }
 
   async loadMetrics() {
     try {
-      // Fetch metrics from your API
-      const response = await fetch('/api/admin/metrics');
-      if (!response.ok) throw new Error('Failed to load metrics');
-      return await response.json();
+      const analytics = await getCachedAnalytics('admin-dashboard', getAdminAnalytics);
+      return {
+        totalRfps: analytics?.rfxStats?.totalRfps || analytics?.rfxStats?.total || 0,
+        totalResponses: analytics?.rfxStats?.responseCount || 0,
+        activeUsers: analytics?.userMetrics?.activeUsers || 0,
+        conversionRate: analytics?.userMetrics?.conversionRate || 0,
+        aiMetrics: analytics?.aiPerformance || null,
+        responseTrends: analytics?.rfxStats?.trends || {},
+        statusDistribution: analytics?.rfxStats?.statusDistribution || {},
+        raw: analytics,
+      };
     } catch (error) {
       console.error('Error loading metrics:', error);
-      showToast('Failed to load metrics', 'error');
+      showError('Failed to load metrics');
       return null;
     }
   }
@@ -127,30 +135,24 @@ class AdminDashboard {
         sortOrder: order
       });
 
-      const response = await fetch(`/api/admin/responses?${query.toString()}`);
-      if (!response.ok) throw new Error('Failed to load responses');
-      
-      const data = await response.json();
+      const data = await httpClient.get('/admin/responses', { params: Object.fromEntries(query) });
       this.renderResponses(data);
       this.updatePagination(data.total, data.page, data.pages);
-      
+
       return data;
     } catch (error) {
       console.error('Error loading responses:', error);
-      showToast('Failed to load responses', 'error');
+      showError('Failed to load responses');
       return { items: [], total: 0, page: 1, pages: 1 };
     }
   }
 
   async loadAiInsights() {
     try {
-      // Fetch AI-powered insights
-      const response = await fetch('/api/ai/insights');
-      if (!response.ok) throw new Error('Failed to load AI insights');
-      return await response.json();
+      return await httpClient.get('/ai/insights');
     } catch (error) {
       console.error('Error loading AI insights:', error);
-      showToast('Failed to load AI insights', 'error');
+      showError('Failed to load AI insights');
       return null;
     }
   }
@@ -341,11 +343,8 @@ class AdminDashboard {
         const modalInstance = new bootstrap.Modal(modal);
         modalInstance.show();
         
-        // Fetch response details
-        const response = await fetch(`/api/admin/responses/${responseId}`);
-        if (!response.ok) throw new Error('Failed to load response details');
-        
-        const data = await response.json();
+        const data = await httpClient.get(`/admin/responses/${responseId}`);
+        const analytics = data?.rfxId ? await getRfxResponseAnalytics(data.rfxId) : null;
         
         // Render response details
         modalBody.innerHTML = `
@@ -368,12 +367,22 @@ class AdminDashboard {
               </div>
             </div>
             ${this.renderResponseActions(data)}
+            ${analytics ? `
+              <div class="mt-4">
+                <h6>RFX Performance</h6>
+                <div class="d-flex gap-3 flex-wrap">
+                  <span class="badge bg-primary">Responses: ${analytics.responseCount || 0}</span>
+                  <span class="badge bg-info text-dark">Avg Match: ${analytics.averageMatchScore || 0}%</span>
+                  <span class="badge bg-secondary">Avg Response Time: ${analytics.averageResponseTime || 0} hrs</span>
+                </div>
+              </div>
+            ` : ''}
           </div>
         `;
       }
     } catch (error) {
       console.error('Error loading response details:', error);
-      showToast('Failed to load response details', 'error');
+      showError('Failed to load response details');
     }
   }
 

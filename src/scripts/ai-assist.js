@@ -1,10 +1,10 @@
-import { showToast } from './shared.js';
-import { 
-  generateProposal, 
-  generateResponse, 
-  suggestMatches, 
+import { showError, showSuccess } from './shared.js';
+import {
+  generateProposal as requestProposal,
+  generateResponse as requestResponse,
+  suggestMatches,
   getRfxAnalysis,
-  getMarketInsights 
+  getMarketInsights
 } from '../services/aiService.js';
 
 class AIAssist {
@@ -78,26 +78,31 @@ class AIAssist {
     const editor = document.getElementById(editorId);
     if (!editor) return {};
 
-    // Handle different editor types
+    const dataset = editor.dataset || {};
+    const baseContext = {
+      content: editor.value || editor.textContent,
+      selection: this.getSelectionInfo(editor),
+      type: dataset.editorType || 'text',
+      rfxId: dataset.rfxId || editor.closest('[data-rfx-id]')?.dataset.rfxId,
+      industry: dataset.industry || dataset.industryCode || editor.closest('[data-industry-code]')?.dataset.industryCode,
+      filters: dataset.aiFilters ? this.safeParse(dataset.aiFilters) : undefined,
+    };
+
     if (editor.tagName === 'TEXTAREA' || editor.isContentEditable) {
-      return {
-        content: editor.value || editor.textContent,
-        selection: this.getSelectionInfo(editor),
-        type: editor.dataset.editorType || 'text'
-      };
+      return baseContext;
     }
 
-    // Handle rich text editors (like TinyMCE, Quill, etc.)
     if (window.tinymce && window.tinymce.get(editorId)) {
       const tinyMce = window.tinymce.get(editorId);
       return {
+        ...baseContext,
         content: tinyMce.getContent(),
         selection: tinyMce.selection.getContent(),
         type: 'richtext'
       };
     }
 
-    return {};
+    return baseContext;
   }
 
   getSelectionInfo(editor) {
@@ -124,7 +129,7 @@ class AIAssist {
 
   async handleAIAction(action, context, editorId) {
     if (this.isLoading) {
-      showToast('AI is already processing a request', 'info');
+      showError('AI is already processing a request');
       return;
     }
 
@@ -150,15 +155,24 @@ class AIAssist {
         case 'generate-response':
           result = await this.generateResponse(context);
           break;
+        case 'suggest-matches':
+          result = await this.getMatchSuggestions(context);
+          break;
+        case 'analyze-rfx':
+          result = await this.analyzeRfx(context);
+          break;
+        case 'market-insights':
+          result = await this.fetchMarketInsights(context);
+          break;
         default:
           throw new Error(`Unknown AI action: ${action}`);
       }
 
       this.applyResultToEditor(editorId, result, action);
-      showToast('AI assistance applied successfully', 'success');
+      showSuccess('AI assistance applied successfully');
     } catch (error) {
       console.error('AI Assist Error:', error);
-      showToast(`AI Error: ${error.message}`, 'error');
+      showError(`AI Error: ${error.message}`);
     } finally {
       this.isLoading = false;
       this.showLoading(editorId, false);
@@ -240,7 +254,7 @@ class AIAssist {
     if (!rfxId) {
       throw new Error('RFX ID is required to generate a proposal');
     }
-    return await generateProposal(rfxId, rest);
+    return await requestProposal(rfxId, rest);
   }
 
   async generateResponse(context) {
@@ -248,80 +262,179 @@ class AIAssist {
     if (!rfxId) {
       throw new Error('RFX ID is required to generate a response');
     }
-    return await generateResponse(rfxId, rest);
+    return await requestResponse(rfxId, rest);
   }
 
   applyResultToEditor(editorId, result, action) {
+    const structuredActions = new Set(['suggest-matches', 'analyze-rfx', 'market-insights']);
+    if (structuredActions.has(action)) {
+      const outputTarget = this.getOutputTarget(editorId);
+      if (outputTarget) {
+        outputTarget.innerHTML = this.formatStructuredResult(action, result);
+        outputTarget.classList.remove('hidden');
+      } else {
+        console.table(result);
+      }
+      return;
+    }
+
     const editor = document.getElementById(editorId);
     if (!editor) return;
 
-    // Handle different editor types
     if (editor.tagName === 'TEXTAREA') {
       const selection = this.getSelectionInfo(editor);
       const before = editor.value.substring(0, selection.start);
       const after = editor.value.substring(selection.end);
-      
-      // For textareas, just replace the selected text with the result
       editor.value = before + result + after;
-      
-      // Trigger change event
-      const event = new Event('input', { bubbles: true });
-      editor.dispatchEvent(event);
-      
-      // Set cursor position
+      editor.dispatchEvent(new Event('input', { bubbles: true }));
       const newPosition = (before + result).length;
       editor.setSelectionRange(newPosition, newPosition);
-      
     } else if (editor.isContentEditable) {
-      // For contenteditable divs
       const selection = window.getSelection();
       if (selection.rangeCount > 0) {
         const range = selection.getRangeAt(0);
-        
-        // Create a new text node with the result
         const textNode = document.createTextNode(result);
-        
-        // Delete the current selection
         range.deleteContents();
-        
-        // Insert the new content
         range.insertNode(textNode);
-        
-        // Move cursor to the end of the inserted content
         range.setStartAfter(textNode);
         range.setEndAfter(textNode);
-        
-        // Clear any existing selections and add the new range
         selection.removeAllRanges();
         selection.addRange(range);
-        
-        // Trigger input event
-        const event = new Event('input', { bubbles: true });
-        editor.dispatchEvent(event);
+        editor.dispatchEvent(new Event('input', { bubbles: true }));
       }
     } else if (window.tinymce && window.tinymce.get(editorId)) {
-      // Handle TinyMCE editor
-      const tinyMce = window.tinymce.get(editorId);
-      tinyMce.setContent(result);
+      window.tinymce.get(editorId).setContent(result);
     }
-    
-    // Focus the editor
+
     editor.focus();
   }
 
   showLoading(editorId, isLoading) {
-    const container = document.querySelector(`#${editorId}`).parentNode.querySelector('.ai-assist-container');
+    const editor = document.getElementById(editorId);
+    if (!editor) return;
+    const container = editor.parentNode?.querySelector('.ai-assist-container');
     if (!container) return;
-    
+
     const button = container.querySelector('.ai-assist-button');
     const loader = container.querySelector('.ai-assist-loader');
-    
+
     if (isLoading) {
       button.disabled = true;
       loader.classList.remove('hidden');
     } else {
       button.disabled = false;
       loader.classList.add('hidden');
+    }
+  }
+
+  getMatchSuggestions(context) {
+    const rfxId = context.rfxId;
+    if (!rfxId) {
+      throw new Error('RFX ID is required to suggest matches');
+    }
+    return suggestMatches(rfxId, context.filters || {});
+  }
+
+  analyzeRfx(context) {
+    if (!context.rfxId) {
+      throw new Error('RFX ID is required for AI analysis');
+    }
+    return getRfxAnalysis(context.rfxId);
+  }
+
+  fetchMarketInsights(context) {
+    const industry = context.industry;
+    if (!industry) {
+      throw new Error('Industry context required for market insights');
+    }
+    return getMarketInsights(industry);
+  }
+
+  getOutputTarget(editorId) {
+    return (
+      document.querySelector(`[data-ai-output="${editorId}"]`) ||
+      document.getElementById(`${editorId}-ai-output`) ||
+      document.querySelector('[data-ai-output-default]')
+    );
+  }
+
+  formatStructuredResult(action, data) {
+    if (!data) {
+      return '<p class="text-muted">No insights available.</p>';
+    }
+
+    if (action === 'suggest-matches') {
+      const matches = Array.isArray(data) ? data : data.matches || [];
+      if (!matches.length) {
+        return '<p class="text-muted">No matches available.</p>';
+      }
+      return `
+        <ul class="ai-match-list">
+          ${matches
+            .map(match => `
+              <li>
+                <strong>${match.name || match.company || 'Vendor'}</strong>
+                ${match.score ? `<span class="badge">${Math.round(match.score)}%</span>` : ''}
+                ${match.summary ? `<p>${match.summary}</p>` : ''}
+              </li>
+            `)
+            .join('')}
+        </ul>
+      `;
+    }
+
+    if (action === 'analyze-rfx') {
+      return this.formatKeyValueList(data.summary || data);
+    }
+
+    if (action === 'market-insights') {
+      return this.formatKeyValueList(data.insights || data);
+    }
+
+    return this.formatKeyValueList(data);
+  }
+
+  formatKeyValueList(payload) {
+    if (typeof payload === 'string') {
+      return `<p>${payload}</p>`;
+    }
+
+    if (Array.isArray(payload)) {
+      return `
+        <ul>
+          ${payload.map(item => `<li>${typeof item === 'string' ? item : JSON.stringify(item)}</li>`).join('')}
+        </ul>
+      `;
+    }
+
+    if (typeof payload === 'object') {
+      return `
+        <dl>
+          ${Object.entries(payload)
+            .map(([key, value]) => `
+              <dt>${this.formatLabel(key)}</dt>
+              <dd>${typeof value === 'object' ? JSON.stringify(value) : value}</dd>
+            `)
+            .join('')}
+        </dl>
+      `;
+    }
+
+    return `<p>${String(payload)}</p>`;
+  }
+
+  formatLabel(label) {
+    return label
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/_/g, ' ')
+      .replace(/^./, str => str.toUpperCase());
+  }
+
+  safeParse(value) {
+    try {
+      return JSON.parse(value);
+    } catch (error) {
+      return undefined;
     }
   }
 }

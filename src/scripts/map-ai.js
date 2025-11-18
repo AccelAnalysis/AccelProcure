@@ -1,591 +1,257 @@
-import { Deck } from '@deck.gl/core';
-import { GeoJsonLayer, ArcLayer, HeatmapLayer, PolygonLayer, ScatterplotLayer } from '@deck.gl/layers';
-import { TripsLayer } from '@deck.gl/geo-layers';
-import { mapbox } from './map3d';
-import { getMapLayers } from '../services/mapService';
-import { debounce } from '../utils/helpers';
+import { MapboxLayer } from '@deck.gl/mapbox';
+import { ScatterplotLayer, HeatmapLayer, ArcLayer, PolygonLayer } from 'deck.gl';
+import { getMapLayers } from '../services/mapService.js';
+import { formatCurrency, formatRelativeTime, debounce } from './shared.js';
 
-// Configuration constants
-const MAP_LAYER_IDS = {
-  RFX_POINTS: 'rfx-points',
-  AI_HEATMAP: 'ai-heatmap',
-  AI_ARCS: 'ai-arcs',
-  AI_CONFIDENCE: 'ai-confidence',
-  AI_ANALYTICS: 'ai-analytics'
+const LAYER_IDS = {
+  RFX_POINTS: 'deck-rfx-points',
+  AI_HEATMAP: 'deck-ai-heatmap',
+  AI_CONNECTIONS: 'deck-ai-connections',
+  AI_CONFIDENCE: 'deck-ai-confidence',
+  AI_ANOMALIES: 'deck-ai-anomalies',
 };
 
-// Color scales and styling
-const COLOR_SCALE = [
-  [255, 255, 204],  // Light yellow
-  [199, 233, 180],  // Light green
-  [127, 205, 187],  // Teal
-  [65, 182, 196],   // Blue
-  [29, 145, 192],   // Dark blue
-  [34, 94, 168],    // Navy
-  [12, 44, 132]     // Dark navy
-];
-
-class AIMapLayers {
-  constructor(mapInstance) {
-    this.map = mapInstance;
-    this.deck = null;
-    this.layers = {};
-    this.data = {
-      rfx: null,
-      heatmap: null,
-      connections: [],
-      confidenceZones: [],
-      aiInsights: null
-    };
-    this.aiStream = null;
-    this.lastUpdate = null;
-    this.updateInterval = 30000; // 30 seconds between AI updates
-    this.eventHandlers = new Map();
-    
-    this.initDeck();
-    this.setupEventListeners();
-    this.startAIStream();
+export class MapAIOverlay {
+  constructor(map) {
+    this.map = map;
+    this.layers = new Map();
+    this.data = { features: [], aiInsights: {} };
+    this.handleResize = debounce(() => this.syncTooltip(), 100);
+    window.addEventListener('resize', this.handleResize);
   }
 
-  // Event emitter pattern for component communication
-  on(event, callback) {
-    if (!this.eventHandlers.has(event)) {
-      this.eventHandlers.set(event, new Set());
-    }
-    this.eventHandlers.get(event).add(callback);
-    return () => this.off(event, callback);
-  }
-
-  off(event, callback) {
-    if (this.eventHandlers.has(event)) {
-      this.eventHandlers.get(event).delete(callback);
-    }
-  }
-
-  emit(event, data) {
-    if (this.eventHandlers.has(event)) {
-      for (const callback of this.eventHandlers.get(event)) {
-        callback(data);
-      }
-    }
-  }
-
-  async startAIStream() {
+  async load(filters = {}) {
     try {
-      // Connect to AI streaming endpoint
-      this.aiStream = new EventSource('/api/ai/mapInsights/stream');
-      
-      this.aiStream.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        this.handleAIUpdate(data);
-      };
-      
-      this.aiStream.onerror = (error) => {
-        console.error('AI stream error:', error);
-        this.reconnectAIStream();
-      };
-      
+      const payload = await getMapLayers(filters);
+      const normalized = normalizePayload(payload);
+      this.data = normalized;
+      this.renderLayers();
     } catch (error) {
-      console.error('Failed to start AI stream:', error);
-      // Fallback to polling if SSE is not available
-      this.setupAIPolling();
+      console.error('Failed to load AI map layers', error);
     }
   }
 
-  setupAIPolling() {
-    // Fallback polling mechanism
-    const poll = async () => {
-      try {
-        const response = await fetch('/api/ai/mapInsights');
-        const data = await response.json();
-        this.handleAIUpdate(data);
-      } catch (error) {
-        console.error('AI polling error:', error);
-      }
-      setTimeout(poll, this.updateInterval);
+  renderLayers() {
+    const tooltipHandlers = {
+      onHover: (info) => this.handleHover(info),
+      onClick: (info) => this.handleClick(info),
     };
-    poll();
-  }
 
-  reconnectAIStream() {
-    if (this.aiStream) {
-      this.aiStream.close();
-    }
-    setTimeout(() => this.startAIStream(), 5000);
-  }
+    const pointLayer = new MapboxLayer({
+      id: LAYER_IDS.RFX_POINTS,
+      type: ScatterplotLayer,
+      data: this.data.features,
+      pickable: true,
+      filled: true,
+      radiusMinPixels: 5,
+      radiusMaxPixels: 35,
+      getPosition: (d) => d.geometry.coordinates,
+      getRadius: (d) => 4 + Math.log((d.properties?.budget || 1)) * 2,
+      getFillColor: (d) => getStatusColor(d.properties?.status),
+      getLineColor: [255, 255, 255],
+      getLineWidth: 1,
+      ...tooltipHandlers,
+    });
 
-  handleAIUpdate(aiData) {
-    this.lastUpdate = new Date();
-    this.data.aiInsights = aiData;
-    
-    // Update existing data with AI insights
-    if (aiData.heatmapUpdates) {
-      this.updateHeatmapData(aiData.heatmapUpdates);
-    }
-    
-    if (aiData.newConnections) {
-      this.updateConnectionData(aiData.newConnections);
-    }
-    
-    if (aiData.confidenceUpdates) {
-      this.updateConfidenceZones(aiData.confidenceUpdates);
-    }
-    
-    // Trigger UI update
-    this.updateLayers();
-    
-    // Emit event for other components
-    this.emit('aiUpdate', aiData);
-  }
+    this.addLayer(pointLayer);
 
-  updateHeatmapData(updates) {
-    if (!this.data.heatmap) return;
-    
-    // Apply updates to heatmap data
-    updates.forEach(update => {
-      const existing = this.data.heatmap.find(p => 
-        p.position[0] === update.position[0] && 
-        p.position[1] === update.position[1]
+    if (this.data.aiInsights.heatmap?.length) {
+      this.addLayer(
+        new MapboxLayer({
+          id: LAYER_IDS.AI_HEATMAP,
+          type: HeatmapLayer,
+          data: this.data.aiInsights.heatmap,
+          getPosition: (d) => [d.lng, d.lat],
+          getWeight: (d) => d.intensity || d.weight || 0.2,
+          radiusPixels: 40,
+          intensity: 1,
+          threshold: 0.05,
+        }),
       );
-      
-      if (existing) {
-        existing.weight = update.weight;
-      } else {
-        this.data.heatmap.push(update);
-      }
-    });
-  }
-
-  updateConnectionData(newConnections) {
-    // Merge new connections, avoiding duplicates
-    newConnections.forEach(newConn => {
-      const exists = this.data.connections.some(conn => 
-        conn.sourcePosition[0] === newConn.sourcePosition[0] &&
-        conn.sourcePosition[1] === newConn.sourcePosition[1] &&
-        conn.targetPosition[0] === newConn.targetPosition[0] &&
-        conn.targetPosition[1] === newConn.targetPosition[1]
-      );
-      
-      if (!exists) {
-        this.data.connections.push(newConn);
-      }
-    });
-  }
-
-  updateConfidenceZones(updates) {
-    updates.forEach(update => {
-      const existingZone = this.data.confidenceZones.find(
-        z => z.id === update.id
-      );
-      
-      if (existingZone) {
-        Object.assign(existingZone, update);
-      } else {
-        this.data.confidenceZones.push(update);
-      }
-    });
-  }
-
-  initDeck() {
-    this.deck = new Deck({
-      canvas: 'deck-canvas',
-      initialViewState: {
-        longitude: -98.5795,
-        latitude: 39.8283,
-        zoom: 3,
-        pitch: 45,
-        bearing: 0
-      },
-      controller: true,
-      onViewStateChange: ({ viewState }) => {
-        this.map.jumpTo({
-          center: [viewState.longitude, viewState.latitude],
-          zoom: viewState.zoom,
-          bearing: viewState.bearing,
-          pitch: viewState.pitch
-        });
-      },
-      layers: []
-    });
-  }
-
-  async loadData(filters = {}) {
-    try {
-      const mapData = await getMapLayers(filters);
-      this.data.rfx = mapData.features;
-      this.processAIData(mapData);
-      this.updateLayers();
-    } catch (error) {
-      console.error('Error loading map data:', error);
-    }
-  }
-
-  processAIData(mapData) {
-    this.data.heatmap = this.generateHeatmapData(mapData.features);
-    this.data.connections = this.generateConnections(mapData.features);
-    this.data.confidenceZones = this.generateConfidenceZones(mapData.features);
-  }
-
-  generateHeatmapData(features) {
-    return features.map(feature => ({
-      position: [feature.geometry.coordinates[0], feature.geometry.coordinates[1]],
-      weight: this.calculateHeatmapWeight(feature)
-    }));
-  }
-
-  calculateHeatmapWeight(feature) {
-    const budgetWeight = Math.min(1, (feature.properties.budget || 0) / 1000000);
-    const recencyWeight = 1 - ((new Date() - new Date(feature.properties.created_at)) / (1000 * 60 * 60 * 24 * 30));
-    const confidenceWeight = feature.properties.ai_confidence || 0.5;
-    return (budgetWeight * 0.4) + (recencyWeight * 0.3) + (confidenceWeight * 0.3);
-  }
-
-  generateConnections(features) {
-    const connections = [];
-    const byRegion = {};
-    
-    features.forEach(feature => {
-      const region = feature.properties.region || 'global';
-      if (!byRegion[region]) byRegion[region] = [];
-      byRegion[region].push(feature);
-    });
-
-    Object.values(byRegion).forEach(regionFeatures => {
-      if (regionFeatures.length > 1) {
-        for (let i = 0; i < regionFeatures.length - 1; i++) {
-          const source = regionFeatures[i].geometry.coordinates;
-          const target = regionFeatures[i + 1].geometry.coordinates;
-          
-          connections.push({
-            sourcePosition: [source[0], source[1]],
-            targetPosition: [target[0], target[1]],
-            value: this.calculateConnectionStrength(regionFeatures[i], regionFeatures[i + 1])
-          });
-        }
-      }
-    });
-
-    return connections;
-  }
-
-  calculateConnectionStrength(featureA, featureB) {
-    let score = 0;
-    const budgetA = featureA.properties.budget || 0;
-    const budgetB = featureB.properties.budget || 0;
-    const budgetDiff = Math.abs(budgetA - budgetB) / Math.max(budgetA, budgetB);
-    if (budgetDiff <= 0.2) score += 0.4;
-    
-    if (featureA.properties.region === featureB.properties.region) score += 0.3;
-    
-    if (featureA.properties.category && featureB.properties.category) {
-      if (featureA.properties.category === featureB.properties.category) score += 0.3;
-    }
-    
-    return Math.min(1, score);
-  }
-
-  generateConfidenceZones(features) {
-    const zones = [];
-    const confidenceGroups = {};
-    
-    features.forEach(feature => {
-      const confidence = feature.properties.ai_confidence || 0;
-      const level = Math.floor(confidence * 4) / 4;
-      
-      if (!confidenceGroups[level]) {
-        confidenceGroups[level] = [];
-      }
-      confidenceGroups[level].push(feature);
-    });
-    
-    Object.entries(confidenceGroups).forEach(([level, group]) => {
-      if (group.length === 0) return;
-      
-      const coordinates = group.map(f => f.geometry.coordinates);
-      const hull = this.calculateConvexHull(coordinates);
-      
-      if (hull.length >= 3) {
-        zones.push({
-          id: `zone-${level}`,
-          coordinates: [hull],
-          confidence: parseFloat(level)
-        });
-      }
-    });
-    
-    return zones;
-  }
-
-  calculateConvexHull(points) {
-    if (points.length <= 3) return points;
-    
-    let pivot = points[0];
-    for (const p of points) {
-      if (p[1] < pivot[1] || (p[1] === pivot[1] && p[0] < pivot[0])) {
-        pivot = p;
-      }
-    }
-    
-    const sorted = [...points].sort((a, b) => {
-      const angleA = Math.atan2(a[1] - pivot[1], a[0] - pivot[0]);
-      const angleB = Math.atan2(b[1] - pivot[1], b[0] - pivot[0]);
-      return angleA - angleB;
-    });
-    
-    const hull = [sorted[0], sorted[1]];
-    
-    for (let i = 2; i < sorted.length; i++) {
-      let point = sorted[i];
-      
-      while (hull.length >= 2) {
-        const last = hull[hull.length - 1];
-        const secondLast = hull[hull.length - 2];
-        const cross = (point[0] - last[0]) * (secondLast[1] - last[1]) - 
-                     (point[1] - last[1]) * (secondLast[0] - last[0]);
-        
-        if (cross <= 0) {
-          hull.pop();
-        } else {
-          break;
-        }
-      }
-      
-      hull.push(point);
-    }
-    
-    return hull;
-  }
-
-  updateLayers() {
-    if (!this.deck || !this.data.rfx) return;
-    
-    const layers = [
-      // RFX Points Layer
-      new GeoJsonLayer({
-        id: MAP_LAYER_IDS.RFX_POINTS,
-        data: {
-          type: 'FeatureCollection',
-          features: this.data.rfx
-        },
-        pickable: true,
-        stroked: true,
-        filled: true,
-        extruded: true,
-        pointType: 'circle',
-        lineWidthScale: 20,
-        lineWidthMinPixels: 2,
-        getFillColor: [255, 140, 0, 200],
-        getLineColor: [255, 255, 255],
-        getPointRadius: 100,
-        getElevation: d => (d.properties.budget || 0) / 10000,
-        getLineWidth: 1,
-        onHover: this.handlePointHover.bind(this),
-        onClick: this.handlePointClick.bind(this)
-      }),
-      
-      // Heatmap Layer
-      new HeatmapLayer({
-        id: MAP_LAYER_IDS.AI_HEATMAP,
-        data: this.data.heatmap,
-        getPosition: d => d.position,
-        getWeight: d => d.weight,
-        radiusPixels: 50,
-        intensity: 1,
-        threshold: 0.03,
-        colorRange: COLOR_SCALE,
-        opacity: 0.8,
-        visible: true
-      }),
-      
-      // Connection Arcs Layer
-      new ArcLayer({
-        id: MAP_LAYER_IDS.AI_ARCS,
-        data: this.data.connections,
-        getSourcePosition: d => d.sourcePosition,
-        getTargetPosition: d => d.targetPosition,
-        getSourceColor: [0, 128, 200],
-        getTargetColor: [200, 0, 80],
-        getWidth: d => 1 + (d.value * 3),
-        getHeight: 0.5,
-        getTilt: 15,
-        opacity: 0.4,
-        visible: true
-      }),
-      
-      // Confidence Zones Layer
-      new PolygonLayer({
-        id: MAP_LAYER_IDS.AI_CONFIDENCE,
-        data: this.data.confidenceZones,
-        getPolygon: d => d.coordinates,
-        getFillColor: d => {
-          const r = Math.round(255 * (1 - d.confidence));
-          const g = Math.round(255 * d.confidence);
-          return [r, g, 0, 100];
-        },
-        getLineColor: [255, 255, 255, 150],
-        lineWidthMinPixels: 1,
-        stroked: true,
-        filled: true,
-        extruded: false,
-        wireframe: false,
-        opacity: 0.3,
-        visible: true
-      }),
-
-      // AI Anomalies Layer
-      ...(this.data.aiInsights?.anomalies ? [
-        new ScatterplotLayer({
-          id: 'ai-anomalies',
-          data: this.data.aiInsights.anomalies,
-          getPosition: d => d.position,
-          getRadius: d => 100 + (d.severity * 50),
-          getFillColor: [255, 0, 0, 200],
-          getLineColor: [255, 255, 255],
-          getLineWidth: 2,
-          radiusMinPixels: 5,
-          radiusMaxPixels: 20,
-          pickable: true,
-          onHover: this.handleAnomalyHover.bind(this)
-        })
-      ] : [])
-    ];
-    
-    this.deck.setProps({ layers });
-  }
-
-  handlePointHover(info) {
-    if (info.object) {
-      const { properties } = info.object;
-      const html = `
-        <div class="map-tooltip">
-          <h4>${properties.title || 'Untitled RFX'}</h4>
-          <p>Status: ${properties.status || 'N/A'}</p>
-          <p>Budget: $${(properties.budget || 0).toLocaleString()}</p>
-          <p>Due: ${new Date(properties.due_date).toLocaleDateString()}</p>
-          ${properties.ai_confidence ? `<p>AI Confidence: ${Math.round(properties.ai_confidence * 100)}%</p>` : ''}
-        </div>
-      `;
-      this.showTooltip(info.x, info.y, html);
     } else {
+      this.removeLayer(LAYER_IDS.AI_HEATMAP);
+    }
+
+    if (this.data.aiInsights.connections?.length) {
+      this.addLayer(
+        new MapboxLayer({
+          id: LAYER_IDS.AI_CONNECTIONS,
+          type: ArcLayer,
+          data: this.data.aiInsights.connections,
+          getSourcePosition: (d) => d.sourcePosition,
+          getTargetPosition: (d) => d.targetPosition,
+          getSourceColor: [59, 130, 246, 180],
+          getTargetColor: [249, 115, 22, 180],
+          getWidth: (d) => 1 + (d.weight || 0.5) * 3,
+          greatCircle: true,
+          pickable: false,
+        }),
+      );
+    } else {
+      this.removeLayer(LAYER_IDS.AI_CONNECTIONS);
+    }
+
+    if (this.data.aiInsights.confidenceZones?.length) {
+      this.addLayer(
+        new MapboxLayer({
+          id: LAYER_IDS.AI_CONFIDENCE,
+          type: PolygonLayer,
+          data: this.data.aiInsights.confidenceZones,
+          getPolygon: (d) => d.coordinates,
+          stroked: true,
+          filled: true,
+          getLineColor: [148, 163, 184, 160],
+          getFillColor: (d) => {
+            const intensity = Math.min(1, Math.max(0, d.confidence || 0.2));
+            return [56, 189, 248, intensity * 80 + 20];
+          },
+          lineWidthMinPixels: 1,
+          pickable: false,
+        }),
+      );
+    } else {
+      this.removeLayer(LAYER_IDS.AI_CONFIDENCE);
+    }
+
+    if (this.data.aiInsights.anomalies?.length) {
+      this.addLayer(
+        new MapboxLayer({
+          id: LAYER_IDS.AI_ANOMALIES,
+          type: ScatterplotLayer,
+          data: this.data.aiInsights.anomalies,
+          pickable: true,
+          getPosition: (d) => d.position,
+          getRadius: (d) => 6 + (d.severity || 0.5) * 4,
+          getFillColor: [239, 68, 68, 220],
+          getLineColor: [255, 255, 255],
+          getLineWidth: 1,
+          onHover: (info) => this.handleAnomalyHover(info),
+        }),
+      );
+    } else {
+      this.removeLayer(LAYER_IDS.AI_ANOMALIES);
+    }
+  }
+
+  addLayer(layer) {
+    if (this.map.getLayer(layer.id)) {
+      this.map.removeLayer(layer.id);
+    }
+    this.layers.set(layer.id, layer);
+    this.map.addLayer(layer);
+  }
+
+  removeLayer(layerId) {
+    if (this.map.getLayer(layerId)) {
+      this.map.removeLayer(layerId);
+    }
+    this.layers.delete(layerId);
+  }
+
+  handleHover(info) {
+    if (!info?.object) {
       this.hideTooltip();
+      return;
+    }
+
+    const { properties } = info.object;
+    const html = `
+      <strong>${properties?.title || properties?.name || 'Opportunity'}</strong><br />
+      ${properties?.status ? `<span>Status: ${properties.status}</span><br />` : ''}
+      ${properties?.budget ? `<span>Budget: ${formatCurrency(properties.budget)}</span><br />` : ''}
+      ${properties?.due_date ? `<span>Due: ${formatRelativeTime(properties.due_date, { forceAbsolute: true })}</span>` : ''}
+    `;
+    this.showTooltip(info.x, info.y, html);
+  }
+
+  handleClick(info) {
+    if (info?.object?.properties?.id) {
+      document.dispatchEvent(
+        new CustomEvent('rfx:selected', { detail: { id: info.object.properties.id } }),
+      );
     }
   }
 
   handleAnomalyHover(info) {
-    if (info.object) {
-      const html = `
-        <div class="ai-tooltip">
-          <h4>AI Alert: ${info.object.type}</h4>
-          <p>${info.object.message}</p>
-          <p>Confidence: ${Math.round(info.object.confidence * 100)}%</p>
-          <small>${new Date(info.object.timestamp).toLocaleString()}</small>
-        </div>
-      `;
-      this.showTooltip(info.x, info.y, html);
-    } else {
+    if (!info?.object) {
       this.hideTooltip();
+      return;
     }
-  }
 
-  handlePointClick(info) {
-    if (info.object) {
-      this.emit('rfxSelected', info.object.properties.id);
-    }
+    const html = `
+      <strong>AI Alert</strong><br />
+      ${info.object.message || 'Pattern shift detected'}<br />
+      Confidence: ${(info.object.confidence || 0.5) * 100}%
+    `;
+    this.showTooltip(info.x, info.y, html);
   }
 
   showTooltip(x, y, html) {
     const tooltip = document.getElementById('map-tooltip');
-    if (tooltip) {
-      tooltip.innerHTML = html;
-      tooltip.style.display = 'block';
-      tooltip.style.left = `${x}px`;
-      tooltip.style.top = `${y}px`;
+    if (!tooltip) return;
+    tooltip.innerHTML = html;
+    tooltip.style.left = `${x + 12}px`;
+    tooltip.style.top = `${y + 12}px`;
+    tooltip.classList.remove('hidden');
+  }
+
+  syncTooltip() {
+    const tooltip = document.getElementById('map-tooltip');
+    if (!tooltip) return;
+    if (tooltip.classList.contains('hidden')) {
+      tooltip.style.left = '0px';
+      tooltip.style.top = '0px';
     }
   }
 
   hideTooltip() {
     const tooltip = document.getElementById('map-tooltip');
     if (tooltip) {
-      tooltip.style.display = 'none';
-    }
-  }
-
-  setupEventListeners() {
-    this.handleResize = debounce(() => {
-      if (this.deck) {
-        this.deck.setProps({
-          width: window.innerWidth,
-          height: window.innerHeight
-        });
-      }
-    }, 250);
-
-    this.handleMapMove = () => {
-      if (this.deck) {
-        const { lng, lat } = this.map.getCenter();
-        this.deck.setProps({
-          viewState: {
-            longitude: lng,
-            latitude: lat,
-            zoom: this.map.getZoom(),
-            pitch: this.map.getPitch(),
-            bearing: this.map.getBearing()
-          }
-        });
-      }
-    };
-
-    window.addEventListener('resize', this.handleResize);
-    this.map.on('move', this.handleMapMove);
-  }
-
-  setFilters(filters) {
-    this.loadData(filters);
-  }
-
-  toggleLayer(layerId, visible) {
-    if (this.layers[layerId]) {
-      this.layers[layerId].setProps({ visible });
+      tooltip.classList.add('hidden');
     }
   }
 
   destroy() {
-    if (this.aiStream) {
-      this.aiStream.close();
-      this.aiStream = null;
-    }
-
-    if (this.deck) {
-      this.deck.finalize();
-      this.deck = null;
-    }
-    
     window.removeEventListener('resize', this.handleResize);
-    if (this.map) {
-      this.map.off('move', this.handleMapMove);
-    }
+    [...this.layers.keys()].forEach((layerId) => this.removeLayer(layerId));
+    this.hideTooltip();
   }
 }
 
-// Export a singleton instance
-export let aiMapLayers = null;
+export function initAIOverlay(map) {
+  return new MapAIOverlay(map);
+}
 
-export function initAIMapLayers(mapInstance) {
-  if (!aiMapLayers) {
-    aiMapLayers = new AIMapLayers(mapInstance);
+function normalizePayload(payload) {
+  if (!payload) {
+    return { features: [], aiInsights: {} };
   }
-  return aiMapLayers;
+
+  if (Array.isArray(payload)) {
+    return {
+      features: payload,
+      aiInsights: {},
+    };
+  }
+
+  const features = payload.features || payload.rfxData || [];
+  const aiInsights = payload.aiInsights || payload.ai || {};
+
+  return { features, aiInsights };
 }
 
-export function getAIMapLayers() {
-  return aiMapLayers;
-}
-
-export function destroyAIMapLayers() {
-  if (aiMapLayers) {
-    aiMapLayers.destroy();
-    aiMapLayers = null;
+function getStatusColor(status = '') {
+  const normalized = status.toLowerCase();
+  switch (normalized) {
+    case 'open':
+      return [59, 130, 246, 220];
+    case 'awarded':
+      return [34, 197, 94, 220];
+    case 'closed':
+      return [148, 163, 184, 220];
+    case 'draft':
+      return [249, 115, 22, 220];
+    default:
+      return [129, 140, 248, 220];
   }
 }
-
-export default AIMapLayers;
