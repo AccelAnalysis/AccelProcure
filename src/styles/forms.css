@@ -1,5 +1,10 @@
 /* Forms - Styling for all form elements */
 
+:root {
+  --form-bg-muted: var(--color-background, #f8fafc);
+  --form-border-muted: var(--color-border, #e2e8f0);
+}
+
 /* Base Form Elements */
 .form-group {
   margin-bottom: var(--space-6);
@@ -53,8 +58,8 @@
 .form-control[readonly],
 .form-select[readonly],
 .form-input[readonly] {
-  background-color: var(--color-gray-100);
-  border-color: var(--color-gray-200);
+  background-color: var(--form-bg-muted);
+  border-color: var(--form-border-muted);
   opacity: 0.8;
   cursor: not-allowed;
 }
@@ -116,6 +121,34 @@
 .form-check-input:checked {
   background-color: var(--color-primary);
   border-color: var(--color-primary);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-5);
+  margin-bottom: var(--space-6);
+}
+
+.input-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.input-chip {
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-size-sm);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.form-helper-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-top: var(--space-2);
 }
 
 .form-check-input:checked[type="checkbox"] {

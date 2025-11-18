@@ -1,0 +1,123 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MapInsightsResponse",
+  "type": "object",
+  "required": ["region", "generatedAt", "overlays", "metrics", "summary"],
+  "properties": {
+    "region": { "type": "string" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "overlays": {
+      "type": "object",
+      "required": ["features", "aiInsights"],
+      "properties": {
+        "features": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string" },
+              "geometry": {
+                "type": "object",
+                "properties": {
+                  "type": { "type": "string" },
+                  "coordinates": { "type": "array" }
+                }
+              },
+              "properties": { "type": "object" }
+            }
+          }
+        },
+        "aiInsights": {
+          "type": "object",
+          "properties": {
+            "heatmap": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "lng": { "type": "number" },
+                  "lat": { "type": "number" },
+                  "intensity": { "type": "number" }
+                },
+                "required": ["lng", "lat"]
+              }
+            },
+            "connections": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "sourcePosition": { "type": "array", "items": { "type": "number" }, "minItems": 2 },
+                  "targetPosition": { "type": "array", "items": { "type": "number" }, "minItems": 2 },
+                  "weight": { "type": "number" }
+                }
+              }
+            },
+            "confidenceZones": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "coordinates": { "type": "array" },
+                  "confidence": { "type": "number" }
+                }
+              }
+            },
+            "anomalies": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "position": { "type": "array", "items": { "type": "number" }, "minItems": 2 },
+                  "severity": { "type": "number" },
+                  "message": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "hotspots": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "score": { "type": "number" },
+              "centroid": { "type": "array", "items": { "type": "number" } }
+            }
+          }
+        },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "required": ["totals"],
+      "properties": {
+        "region": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "totals": {
+          "type": "object",
+          "properties": {
+            "activeRfx": { "type": "number" },
+            "openOpportunities": { "type": "number" },
+            "vendorCoverage": { "type": "number" },
+            "anomalies": { "type": "number" }
+          }
+        },
+        "trend": { "type": "object" },
+        "hotspots": { "type": "array" },
+        "alerts": { "type": "array" }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["text", "provider"],
+      "properties": {
+        "text": { "type": "string" },
+        "bullets": { "type": "array", "items": { "type": "string" } },
+        "provider": { "type": "string" }
+      }
+    }
+  }
+}
