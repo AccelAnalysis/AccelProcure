@@ -1,0 +1,30 @@
+<!-- Loading Overlay -->
+<div id="globalLoader" class="loader-overlay">
+  <div class="loader-container">
+    <div class="loader-logo">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <path d="M50 10L20 40H80L50 10Z" fill="var(--color-primary)" />
+        <path d="M50 90L20 60H80L50 90Z" fill="var(--color-secondary)" />
+        <path d="M30 50L50 30L70 50L50 70L30 50Z" fill="var(--color-accent)" />
+      </svg>
+    </div>
+    <div class="loader-spinner">
+      <div class="spinner"></div>
+    </div>
+    <div class="loader-text">Loading AccelRFx</div>
+    <div class="loader-progress">
+      <div class="progress-bar">
+        <div class="progress-fill"></div>
+      </div>
+      <div class="progress-text">0%</div>
+    </div>
+  </div>
+</div>
+
+<!-- Inline Loader -->
+<template id="inlineLoaderTemplate">
+  <div class="inline-loader">
+    <div class="spinner"></div>
+    <div class="loading-text">Loading...</div>
+  </div>
+</template>

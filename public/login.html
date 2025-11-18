@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AccelRFx - Login</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script type="module" src="/src/services/authService.js"></script>
+  <style>
+    :root {
+      --primary: #4F46E5;
+      --primary-hover: #4338CA;
+      --error: #DC2626;
+      --success: #10B981;
+      --gray-100: #F3F4F6;
+      --gray-200: #E5E7EB;
+      --gray-300: #D1D5DB;
+      --gray-600: #4B5563;
+      --gray-700: #374151;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background-color: #F9FAFB;
+      color: var(--gray-700);
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .login-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      width: 100%;
+      max-width: 420px;
+      padding: 2.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 2rem;
+    }
+
+    .logo img {
+      height: 42px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 1.5rem;
+      color: #111827;
+    }
+
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+      color: var(--gray-700);
+    }
+
+    input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      border: 1px solid var(--gray-300);
+      border-radius: 6px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      font-weight: 500;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+    }
+
+    .btn-text {
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-weight: 500;
+      padding: 0.5rem;
+      margin-top: 0.5rem;
+      width: auto;
+    }
+
+    .btn-text:hover {
+      text-decoration: underline;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      margin: 1.5rem 0;
+      color: var(--gray-600);
+      font-size: 0.875rem;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background-color: var(--gray-200);
+    }
+
+    .divider::before {
+      margin-right: 1rem;
+    }
+
+    .divider::after {
+      margin-left: 1rem;
+    }
+
+    .alert {
+      padding: 0.75rem 1rem;
+      border-radius: 6px;
+      margin-bottom: 1.25rem;
+      font-size: 0.875rem;
+    }
+
+    .alert-error {
+      background-color: #FEE2E2;
+      color: var(--error);
+      border-left: 3px solid var(--error);
+    }
+
+    .alert-success {
+      background-color: #D1FAE5;
+      color: var(--success);
+      border-left: 3px solid var(--success);
+    }
+
+    .loading {
+      display: inline-block;
+      width: 1.25rem;
+      height: 1.25rem;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 0.5rem;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .footer {
+      text-align: center;
+      padding: 1.5rem;
+      color: var(--gray-600);
+      font-size: 0.875rem;
+    }
+
+    @media (max-width: 480px) {
+      .login-card {
+        padding: 1.5rem;
+        margin: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="login-card">
+      <div class="logo">
+        <img src="/assets/logos/accel_logo.png" alt="AccelRFx">
+      </div>
+      
+      <h1>Sign in to your account</h1>
+      
+      <!-- Login Form -->
+      <form id="loginForm">
+        <div id="loginError" class="alert alert-error hidden"></div>
+        <div id="loginSuccess" class="alert alert-success hidden"></div>
+        
+        <div class="form-group">
+          <label for="email">Email address</label>
+          <input 
+            type="email" 
+            id="email" 
+            name="email" 
+            required 
+            autocomplete="email"
+            placeholder="you@example.com"
+          >
+        </div>
+        
+        <div class="form-group">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <label for="password">Password</label>
+            <button type="button" id="forgotPasswordBtn" class="btn-text" style="margin: 0; padding: 0; font-size: 0.875rem;">
+              Forgot password?
+            </button>
+          </div>
+          <input 
+            type="password" 
+            id="password" 
+            name="password" 
+            required 
+            autocomplete="current-password"
+            placeholder="••••••••"
+          >
+        </div>
+        
+        <button type="submit" id="loginBtn" class="btn btn-primary">
+          <span id="loginText">Sign in</span>
+          <div id="loginSpinner" class="loading hidden"></div>
+        </button>
+      </form>
+      
+      <div class="divider">or</div>
+      
+      <p style="text-align: center; font-size: 0.875rem; color: var(--gray-600);">
+        Don't have an account? 
+        <a href="/register.html" style="color: var(--primary); text-decoration: none; font-weight: 500;">
+          Sign up
+        </a>
+      </p>
+      
+      <!-- Forgot Password Form (initially hidden) -->
+      <form id="forgotPasswordForm" class="hidden">
+        <div id="forgotPasswordError" class="alert alert-error hidden"></div>
+        <div id="forgotPasswordSuccess" class="alert alert-success hidden"></div>
+        
+        <div class="form-group">
+          <label for="resetEmail">Email address</label>
+          <input 
+            type="email" 
+            id="resetEmail" 
+            name="email" 
+            required 
+            autocomplete="email"
+            placeholder="you@example.com"
+          >
+        </div>
+        
+        <button type="submit" id="resetPasswordBtn" class="btn btn-primary">
+          <span id="resetText">Send reset link</span>
+          <div id="resetSpinner" class="loading hidden"></div>
+        </button>
+        
+        <button type="button" id="backToLogin" class="btn-text">
+          Back to login
+        </button>
+      </form>
+    </div>
+  </div>
+  
+  <footer class="footer">
+    &copy; 2025 AccelRFx. All rights reserved.
+  </footer>
+
+  <script type="module">
+    import { signIn, resetPassword } from '/src/services/authService.js';
+    
+    // DOM Elements
+    const loginForm = document.getElementById('loginForm');
+    const forgotPasswordForm = document.getElementById('forgotPasswordForm');
+    const forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
+    const backToLoginBtn = document.getElementById('backToLogin');
+    const loginBtn = document.getElementById('loginBtn');
+    const resetPasswordBtn = document.getElementById('resetPasswordBtn');
+    
+    // Toggle between login and forgot password forms
+    forgotPasswordBtn.addEventListener('click', () => {
+      loginForm.classList.add('hidden');
+      forgotPasswordForm.classList.remove('hidden');
+      document.querySelector('h1').textContent = 'Reset your password';
+    });
+    
+    backToLoginBtn.addEventListener('click', () => {
+      loginForm.classList.remove('hidden');
+      forgotPasswordForm.classList.add('hidden');
+      document.querySelector('h1').textContent = 'Sign in to your account';
+    });
+    
+    // Handle login form submission
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const errorElement = document.getElementById('loginError');
+      const successElement = document.getElementById('loginSuccess');
+      const loginText = document.getElementById('loginText');
+      const loginSpinner = document.getElementById('loginSpinner');
+      
+      // Reset messages
+      errorElement.classList.add('hidden');
+      successElement.classList.add('hidden');
+      
+      // Validate inputs
+      if (!email || !password) {
+        showError(errorElement, 'Please enter both email and password');
+        return;
+      }
+      
+      // Show loading state
+      loginBtn.disabled = true;
+      loginText.textContent = 'Signing in...';
+      loginSpinner.classList.remove('hidden');
+      
+      try {
+        const { user, session, error } = await signIn(email, password);
+        
+        if (error) {
+          throw error;
+        }
+        
+        // Redirect to dashboard on successful login
+        window.location.href = '/index.html';
+      } catch (error) {
+        console.error('Login error:', error);
+        showError(errorElement, error.message || 'Failed to sign in. Please check your credentials.');
+      } finally {
+        // Reset button state
+        loginBtn.disabled = false;
+        loginText.textContent = 'Sign in';
+        loginSpinner.classList.add('hidden');
+      }
+    });
+    
+    // Handle forgot password form submission
+    forgotPasswordForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const email = document.getElementById('resetEmail').value;
+      const errorElement = document.getElementById('forgotPasswordError');
+      const successElement = document.getElementById('forgotPasswordSuccess');
+      const resetText = document.getElementById('resetText');
+      const resetSpinner = document.getElementById('resetSpinner');
+      
+      // Reset messages
+      errorElement.classList.add('hidden');
+      successElement.classList.add('hidden');
+      
+      // Validate email
+      if (!email) {
+        showError(errorElement, 'Please enter your email address');
+        return;
+      }
+      
+      // Show loading state
+      resetPasswordBtn.disabled = true;
+      resetText.textContent = 'Sending...';
+      resetSpinner.classList.remove('hidden');
+      
+      try {
+        const { error } = await resetPassword(email);
+        
+        if (error) {
+          throw error;
+        }
+        
+        // Show success message
+        showSuccess(successElement, 'Password reset link sent! Check your email.');
+        document.getElementById('resetEmail').value = '';
+      } catch (error) {
+        console.error('Password reset error:', error);
+        showError(errorElement, error.message || 'Failed to send reset link. Please try again.');
+      } finally {
+        // Reset button state
+        resetPasswordBtn.disabled = false;
+        resetText.textContent = 'Send reset link';
+        resetSpinner.classList.add('hidden');
+      }
+    });
+    
+    // Helper functions
+    function showError(element, message) {
+      element.textContent = message;
+      element.classList.remove('hidden');
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    
+    function showSuccess(element, message) {
+      element.textContent = message;
+      element.classList.remove('hidden');
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    
+    // Check if user is already logged in
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        const { user, error } = await getCurrentUser();
+        if (user && !error) {
+          window.location.href = '/index.html';
+        }
+      } catch (error) {
+        console.error('Auth check error:', error);
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,1590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Submit RFx Response | AccelRFx</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <link href="https://cdn.jsdelivr.net/npm/quill@2.0.0-rc.2/dist/quill.snow.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/styles/main.css">
+  <style>
+    .proposal-header {
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .requirement-card {
+      border-left: 4px solid #0d6efd;
+      margin-bottom: 1.5rem;
+      transition: all 0.2s;
+    }
+    .requirement-card.optional {
+      border-left-color: #6c757d;
+      opacity: 0.8;
+    }
+    .requirement-card:hover {
+      box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    }
+    .file-upload {
+      border: 2px dashed #dee2e6;
+      border-radius: 8px;
+      padding: 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .file-upload:hover {
+      border-color: #0d6efd;
+      background-color: #f8f9ff;
+    }
+    .file-preview {
+      margin-top: 1rem;
+    }
+    .file-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem;
+      background-color: #f8f9fa;
+      border-radius: 4px;
+      margin-bottom: 0.5rem;
+    }
+    .file-item .file-info {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .file-item .file-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .proposal-actions {
+      position: sticky;
+      bottom: 0;
+      background: white;
+      padding: 1rem 0;
+      border-top: 1px solid #dee2e6;
+      box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+    }
+    .ai-suggest-btn {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 10;
+    }
+    .credit-badge {
+      background-color: #e9ecef;
+      color: #495057;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+    .quill {
+      height: 200px;
+      margin-bottom: 2rem;
+    }
+    .quill .ql-toolbar {
+      border-top-left-radius: 8px;
+      border-top-right-radius: 8px;
+    }
+    .quill .ql-container {
+      border-bottom-left-radius: 8px;
+      border-bottom-right-radius: 8px;
+      min-height: 150px;
+    }
+    .ai-suggestion {
+      background-color: #f8f9ff;
+      border-left: 4px solid #0d6efd;
+      padding: 1rem;
+      margin: 1rem 0;
+      border-radius: 4px;
+    }
+    .ai-suggestion-actions {
+      margin-top: 0.5rem;
+      display: flex;
+      gap: 0.5rem;
+      justify-content: flex-end;
+    }
+  </style>
+</head>
+<body class="bg-light">
+  <div id="app" class="d-flex">
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <img src="/assets/logos/accel_logo.png" alt="AccelRFx" class="logo">
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/" class="nav-link"><i class="bi bi-house-door"></i> Dashboard</a>
+        <a href="/proposal.html" class="nav-link"><i class="bi bi-file-earmark-plus"></i> New Proposal</a>
+        <a href="/responses.html" class="nav-link active"><i class="bi bi-inbox"></i> Responses</a>
+        <a href="/profile.html" class="nav-link"><i class="bi bi-person"></i> Profile</a>
+      </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <header class="top-bar">
+        <div class="d-flex justify-content-between align-items-center w-100">
+          <h1 class="h4 mb-0">Submit RFx Response</h1>
+          <div class="d-flex align-items-center">
+            <span class="me-3 credit-badge">
+              <i class="bi bi-lightning-charge-fill text-warning"></i>
+              <span id="credit-balance">0</span> credits
+            </span>
+            <button id="user-menu" class="btn btn-sm btn-outline-secondary">
+              <i class="bi bi-person-circle"></i>
+              <span id="username">Vendor</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main class="container-fluid py-4">
+        <!-- RFx Header -->
+        <div class="proposal-header">
+          <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+              <h2 id="rfx-title" class="h4 mb-2">Loading RFx details...</h2>
+              <div class="text-muted mb-3" id="rfx-meta">
+                <span class="me-3"><i class="bi bi-building"></i> <span id="rfx-company">-</span></span>
+                <span class="me-3"><i class="bi bi-calendar"></i> Due: <span id="rfx-due">-</span></span>
+                <span class="me-3"><i class="bi bi-currency-dollar"></i> Budget: <span id="rfx-budget">-</span></span>
+              </div>
+            </div>
+            <div class="dropdown">
+              <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="responseActions" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-gear"></i> Actions
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="responseActions">
+                <li><a class="dropdown-item" href="#" id="save-draft"><i class="bi bi-save me-2"></i>Save Draft</a></li>
+                <li><a class="dropdown-item" href="#" id="preview-response"><i class="bi bi-eye me-2"></i>Preview Response</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-danger" href="#" id="cancel-response"><i class="bi bi-x-circle me-2"></i>Cancel Response</a></li>
+              </ul>
+            </div>
+          </div>
+          <div class="alert alert-info mb-0" id="rfx-description">
+            <p class="mb-0">Loading RFx description...</p>
+          </div>
+        </div>
+
+        <!-- Response Form -->
+        <form id="response-form">
+          <!-- Company Information -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <h2 class="h5 mb-0">Company Information</h2>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="company-name" class="form-label">Company Name</label>
+                  <input type="text" class="form-control" id="company-name" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="contact-name" class="form-label">Contact Person</label>
+                  <input type="text" class="form-control" id="contact-name" required>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="email" class="form-label">Email</label>
+                  <input type="email" class="form-control" id="email" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="phone" class="form-label">Phone</label>
+                  <input type="tel" class="form-control" id="phone">
+                </div>
+              </div>
+              <div class="mb-3">
+                <label for="company-details" class="form-label">Company Overview</label>
+                <div class="position-relative">
+                  <div id="company-details-editor"></div>
+                  <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="ai-company-details">
+                    <i class="bi bi-magic"></i> AI Enhance
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Response Requirements -->
+          <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <h2 class="h5 mb-0">Response Requirements</h2>
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="show-all-requirements" checked>
+                <label class="form-check-label" for="show-all-requirements">Show All</label>
+              </div>
+            </div>
+            <div class="card-body">
+              <div id="requirements-container">
+                <!-- Requirements will be dynamically loaded here -->
+                <div class="text-center py-5">
+                  <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading requirements...</span>
+                  </div>
+                  <p class="mt-2">Loading requirements...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pricing -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <h2 class="h5 mb-0">Pricing</h2>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table" id="pricing-table">
+                  <thead>
+                    <tr>
+                      <th>Item</th>
+                      <th>Description</th>
+                      <th>Quantity</th>
+                      <th>Unit Price</th>
+                      <th>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody id="pricing-items">
+                    <!-- Pricing items will be added here -->
+                    <tr>
+                      <td colspan="5" class="text-center py-4">
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="add-pricing-item">
+                          <i class="bi bi-plus-lg"></i> Add Pricing Item
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colspan="4" class="text-end fw-bold">Subtotal:</td>
+                      <td id="subtotal">$0.00</td>
+                    </tr>
+                    <tr>
+                      <td colspan="4" class="text-end fw-bold">Taxes:</td>
+                      <td id="taxes">$0.00</td>
+                    </tr>
+                    <tr class="table-active">
+                      <td colspan="4" class="text-end fw-bold">Total:</td>
+                      <td id="total" class="fw-bold">$0.00</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              <div class="row mt-3">
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="pricing-notes" class="form-label">Pricing Notes</label>
+                    <textarea class="form-control" id="pricing-notes" rows="3" placeholder="Any additional notes about pricing, discounts, or terms"></textarea>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="payment-terms" class="form-label">Proposed Payment Terms</label>
+                    <select class="form-select" id="payment-terms">
+                      <option value="net30">Net 30</option>
+                      <option value="net60">Net 60</option>
+                      <option value="upon-completion">Upon Completion</option>
+                      <option value="custom">Custom</option>
+                    </select>
+                  </div>
+                  <div class="mb-3" id="custom-terms-container" style="display: none;">
+                    <label for="custom-terms" class="form-label">Custom Payment Terms</label>
+                    <input type="text" class="form-control" id="custom-terms" placeholder="Specify custom payment terms">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Timeline -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <h2 class="h5 mb-0">Proposed Timeline</h2>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-4 mb-3">
+                  <label for="start-date" class="form-label">Proposed Start Date</label>
+                  <input type="date" class="form-control" id="start-date" required>
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label for="duration" class="form-label">Estimated Duration</label>
+                  <div class="input-group">
+                    <input type="number" class="form-control" id="duration" min="1" value="4" required>
+                    <span class="input-group-text">weeks</span>
+                  </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label for="completion-date" class="form-label">Expected Completion</label>
+                  <input type="date" class="form-control" id="completion-date" readonly>
+                </div>
+              </div>
+              <div class="mb-3">
+                <label for="timeline-notes" class="form-label">Timeline Notes</label>
+                <textarea class="form-control" id="timeline-notes" rows="2" placeholder="Any additional notes about the timeline or milestones"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Attachments -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <h2 class="h5 mb-0">Supporting Documents</h2>
+            </div>
+            <div class="card-body">
+              <div class="file-upload text-center p-5" id="file-upload-area">
+                <i class="bi bi-cloud-arrow-up fs-1 text-muted mb-3"></i>
+                <h5>Drag & drop files here or click to browse</h5>
+                <p class="text-muted small">Supported formats: PDF, DOCX, XLSX, JPG, PNG (Max 10MB each)</p>
+                <input type="file" id="file-input" multiple style="display: none;">
+              </div>
+              <div id="file-previews" class="mt-3">
+                <!-- File previews will be added here -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Terms & Submission -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <h2 class="h5 mb-0">Terms & Submission</h2>
+            </div>
+            <div class="card-body">
+              <div class="mb-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="terms-agreement" required>
+                  <label class="form-check-label" for="terms-agreement">
+                    I certify that the information provided in this response is accurate and complete to the best of my knowledge. I understand that any false statements may result in disqualification.
+                  </label>
+                </div>
+              </div>
+              <div class="mb-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="nda-agreement">
+                  <label class="form-check-label" for="nda-agreement">
+                    I agree to the <a href="#" data-bs-toggle="modal" data-bs-target="#ndaModal">Non-Disclosure Agreement</a> (if applicable)
+                  </label>
+                </div>
+              </div>
+              <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <strong>Important:</strong> Once submitted, you will not be able to edit your response. Please review all information carefully before submitting.
+              </div>
+            </div>
+          </div>
+
+          <!-- Submission Buttons -->
+          <div class="d-flex justify-content-between mb-5">
+            <button type="button" class="btn btn-outline-secondary" id="save-draft-btn">
+              <i class="bi bi-save"></i> Save Draft
+            </button>
+            <div>
+              <button type="button" class="btn btn-outline-primary me-2" id="preview-btn">
+                <i class="bi bi-eye"></i> Preview Response
+              </button>
+              <button type="submit" class="btn btn-primary" id="submit-btn">
+                <i class="bi bi-send"></i> Submit Response
+              </button>
+            </div>
+          </div>
+        </form>
+      </main>
+    </div>
+  </div>
+
+  <!-- NDA Modal -->
+  <div class="modal fade" id="ndaModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Non-Disclosure Agreement</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <h6>CONFIDENTIALITY AGREEMENT</h6>
+          <p>This Confidentiality Agreement ("Agreement") is made and entered into as of the date of submission of this RFx response ("Effective Date") by and between the submitting party ("Recipient") and the RFx issuer ("Discloser").</p>
+          
+          <h6 class="mt-4">1. Confidential Information</h6>
+          <p>For purposes of this Agreement, "Confidential Information" means any data or information that is proprietary to the Discloser and not generally known to the public, whether in tangible or intangible form, whenever and however disclosed, including, but not limited to: (a) any marketing strategies, plans, financial information, or projections, operations, sales estimates, business plans and performance results relating to the past, present or future business activities of the Discloser; (b) plans for products or services, and customer or supplier lists; (c) any scientific or technical information, invention, design, process, procedure, formula, improvement, technology or method; and (d) any other information that should reasonably be recognized as confidential information of the Discloser.</p>
+          
+          <h6 class="mt-4">2. Non-Use and Non-Disclosure</h6>
+          <p>Recipient shall not use any Confidential Information for any purpose except to evaluate and engage in discussions concerning a potential business relationship with the Discloser. Recipient shall not disclose any Confidential Information to third parties, except to its employees, agents, or contractors who need to know such information for the purpose of evaluating the potential business relationship and who are bound by confidentiality obligations at least as restrictive as those set forth in this Agreement.</p>
+          
+          <h6 class="mt-4">3. Time Period</h6>
+          <p>The obligations of confidentiality and non-use shall survive for a period of three (3) years from the Effective Date, except with respect to any Confidential Information that constitutes a trade secret under applicable law, which shall be maintained in confidence for as long as such information remains a trade secret.</p>
+          
+          <div class="form-check mt-4">
+            <input class="form-check-input" type="checkbox" id="nda-acceptance">
+            <label class="form-check-label" for="nda-acceptance">
+              I have read and agree to the terms of this Non-Disclosure Agreement
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary" id="accept-nda" disabled>Accept & Continue</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preview Modal -->
+  <div class="modal fade" id="previewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Preview Response</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="preview-content">
+          <!-- Preview content will be inserted here -->
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary" id="confirm-submit">
+            <i class="bi bi-send"></i> Submit Response
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success Modal -->
+  <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-body text-center p-5">
+          <div class="text-success mb-3" style="font-size: 4rem;">
+            <i class="bi bi-check-circle-fill"></i>
+          </div>
+          <h3 class="mb-3">Response Submitted Successfully!</h3>
+          <p class="text-muted">Your RFx response has been submitted. You will receive a confirmation email shortly.</p>
+          <div class="mt-4">
+            <p class="mb-2">Response ID: <span id="response-id" class="fw-bold">RES-XXXXXX</span></p>
+            <p class="mb-0">Submission Date: <span id="submission-date" class="fw-bold"></span></p>
+          </div>
+          <div class="mt-4">
+            <a href="/" class="btn btn-primary me-2">Back to Dashboard</a>
+            <a href="#" class="btn btn-outline-primary" id="download-pdf">
+              <i class="bi bi-file-earmark-pdf"></i> Download as PDF
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/quill@2.0.0-rc.2/dist/quill.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script>
+    // Wait for DOM to be fully loaded
+    document.addEventListener('DOMContentLoaded', function() {
+      // Initialize Quill editor
+      const quill = new Quill('#company-details-editor', {
+        theme: 'snow',
+        placeholder: 'Provide an overview of your company, relevant experience, and why you are the best fit for this opportunity...',
+        modules: {
+          toolbar: [
+            [{ 'header': [1, 2, false] }],
+            ['bold', 'italic', 'underline', 'strike'],
+            [{'list': 'ordered'}, {'list': 'bullet'}],
+            ['link', 'clean']
+          ]
+        }
+      });
+
+      // Initialize modals
+      const ndaModal = new bootstrap.Modal(document.getElementById('ndaModal'));
+      const previewModal = new bootstrap.Modal(document.getElementById('previewModal'));
+      const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+
+      // Current user and RFx data
+      let currentUser = null;
+      let rfxData = null;
+      let requirements = [];
+      let uploadedFiles = [];
+      
+      // Check authentication status and load user data
+      async function checkAuth() {
+        try {
+          // This would be replaced with actual auth check
+          const response = await fetch('/api/auth/me');
+          if (response.ok) {
+            currentUser = await response.json();
+            document.getElementById('username').textContent = currentUser.name || 'Vendor';
+            updateCreditBalance(currentUser.credits || 0);
+            
+            // Pre-fill user data if available
+            if (currentUser.company) {
+              document.getElementById('company-name').value = currentUser.company.name || '';
+              document.getElementById('contact-name').value = currentUser.contactName || '';
+              document.getElementById('email').value = currentUser.email || '';
+              document.getElementById('phone').value = currentUser.phone || '';
+              
+              if (currentUser.company.overview) {
+                quill.root.innerHTML = currentUser.company.overview;
+              }
+            }
+            
+            // Load RFx data
+            await loadRFxData();
+          } else {
+            window.location.href = '/login.html?redirect=' + encodeURIComponent(window.location.pathname + window.location.search);
+          }
+        } catch (error) {
+          console.error('Auth check failed:', error);
+          showError('Failed to verify authentication. Please try again.');
+        }
+      }
+
+      // Load RFx data
+      async function loadRFxData() {
+        try {
+          // Get RFx ID from URL
+          const urlParams = new URLSearchParams(window.location.search);
+          const rfxId = urlParams.get('id');
+          
+          if (!rfxId) {
+            showError('No RFx ID provided');
+            return;
+          }
+          
+          // Show loading state
+          document.getElementById('rfx-title').innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading RFx details...';
+          
+          // Fetch RFx data
+          const response = await fetch(`/api/rfx/${rfxId}`);
+          if (!response.ok) {
+            throw new Error('Failed to load RFx data');
+          }
+          
+          rfxData = await response.json();
+          
+          // Update UI with RFx data
+          document.getElementById('rfx-title').textContent = rfxData.title;
+          document.getElementById('rfx-company').textContent = rfxData.company || 'N/A';
+          document.getElementById('rfx-due').textContent = new Date(rfxData.deadline).toLocaleDateString();
+          
+          // Format budget
+          const budgetMin = rfxData.budget?.min ? `$${rfxData.budget.min.toLocaleString()}` : 'Not specified';
+          const budgetMax = rfxData.budget?.max ? `$${rfxData.budget.max.toLocaleString()}` : 'Open';
+          document.getElementById('rfx-budget').textContent = `${budgetMin} - ${budgetMax}`;
+          
+          // Set description
+          document.getElementById('rfx-description').innerHTML = `<p class="mb-0">${rfxData.description || 'No description provided.'}</p>`;
+          
+          // Set default start date to tomorrow
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          document.getElementById('start-date').min = tomorrow.toISOString().split('T')[0];
+          
+          // Set default start date if not set
+          if (!document.getElementById('start-date').value) {
+            document.getElementById('start-date').value = tomorrow.toISOString().split('T')[0];
+            updateCompletionDate();
+          }
+          
+          // Load requirements
+          await loadRequirements(rfxData.requirements || []);
+          
+        } catch (error) {
+          console.error('Failed to load RFx data:', error);
+          showError('Failed to load RFx details. Please try again.');
+        }
+      }
+      
+      // Load requirements
+      async function loadRequirements(requirementsList) {
+        try {
+          const container = document.getElementById('requirements-container');
+          
+          if (!requirementsList || requirementsList.length === 0) {
+            container.innerHTML = `
+              <div class="alert alert-info mb-0">
+                <i class="bi bi-info-circle"></i> No specific requirements have been defined for this RFx.
+              </div>
+            `;
+            return;
+          }
+          
+          let html = '';
+          requirements = requirementsList;
+          
+          requirements.forEach((req, index) => {
+            const requirementId = `req-${index}`;
+            const isOptional = !req.mandatory;
+            
+            html += `
+              <div class="card requirement-card ${isOptional ? 'optional' : ''} mb-3" id="${requirementId}-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <div>
+                    <h3 class="h6 mb-0">${req.text}</h3>
+                    ${isOptional ? '<span class="badge bg-secondary ms-2">Optional</span>' : '<span class="badge bg-primary ms-2">Required</span>'}
+                    ${req.type ? `<span class="badge bg-info ms-2">${req.type}</span>` : ''}
+                  </div>
+                  ${isOptional ? `
+                    <div class="form-check form-switch">
+                      <input class="form-check-input requirement-toggle" type="checkbox" role="switch" id="toggle-${requirementId}" ${isOptional ? '' : 'checked disabled'}>
+                      <label class="form-check-label small" for="toggle-${requirementId}">Include</label>
+                    </div>
+                  ` : ''}
+                </div>
+                <div class="card-body requirement-content" ${isOptional ? 'style="display: none;"' : ''}>
+                  ${getRequirementInput(req, requirementId)}
+                </div>
+              </div>
+            `;
+          });
+          
+          container.innerHTML = html;
+          
+          // Initialize requirement toggles
+          document.querySelectorAll('.requirement-toggle').forEach(toggle => {
+            toggle.addEventListener('change', function() {
+              const card = this.closest('.requirement-card');
+              const content = card.querySelector('.requirement-content');
+              content.style.display = this.checked ? 'block' : 'none';
+            });
+          });
+          
+          // Initialize rich text editors for text areas
+          initializeEditors();
+          
+        } catch (error) {
+          console.error('Failed to load requirements:', error);
+          showError('Failed to load requirements. Please refresh the page to try again.');
+        }
+      }
+      
+      // Get appropriate input for requirement type
+      function getRequirementInput(req, id) {
+        const baseId = id.replace(/[^a-zA-Z0-9-]/g, '-');
+        
+        switch (req.type) {
+          case 'text':
+            return `
+              <div class="mb-3">
+                <div id="${baseId}-editor" class="quill-editor"></div>
+                <div class="mt-2 d-flex justify-content-end">
+                  <button type="button" class="btn btn-sm btn-outline-primary ai-suggest-btn" data-requirement-id="${baseId}">
+                    <i class="bi bi-magic"></i> AI Suggest
+                  </button>
+                </div>
+              </div>
+            `;
+            
+          case 'number':
+            return `
+              <div class="input-group mb-3">
+                <input type="number" class="form-control" id="${baseId}-input" min="0" step="0.01">
+                <span class="input-group-text">${req.unit || ''}</span>
+              </div>
+            `;
+            
+          case 'date':
+            return `
+              <div class="mb-3">
+                <input type="date" class="form-control" id="${baseId}-input">
+              </div>
+            `;
+            
+          case 'file':
+            return `
+              <div class="file-upload requirement-upload" data-requirement-id="${baseId}">
+                <i class="bi bi-cloud-arrow-up fs-4 text-muted mb-2"></i>
+                <p class="mb-2">Click or drag files to upload</p>
+                <p class="small text-muted">Supported formats: PDF, DOCX, XLSX, JPG, PNG (Max 10MB)</p>
+                <input type="file" class="d-none requirement-file" id="${baseId}-input" ${req.multiple ? 'multiple' : ''}>
+              </div>
+              <div id="${baseId}-preview" class="file-previews mt-3"></div>
+            `;
+            
+          case 'checkbox':
+            const options = req.options || ['Yes', 'No'];
+            return options.map((option, i) => `
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="${baseId}" id="${baseId}-${i}" value="${option}" ${i === 0 ? 'checked' : ''}>
+                <label class="form-check-label" for="${baseId}-${i}">
+                  ${option}
+                </label>
+              </div>
+            `).join('');
+            
+          default:
+            return `
+              <div class="mb-3">
+                <textarea class="form-control" id="${baseId}-input" rows="3" placeholder="Enter your response here..."></textarea>
+              </div>
+            `;
+        }
+      }
+      
+      // Initialize rich text editors
+      function initializeEditors() {
+        document.querySelectorAll('.quill-editor').forEach(editorEl => {
+          const quill = new Quill(editorEl, {
+            theme: 'snow',
+            modules: {
+              toolbar: [
+                ['bold', 'italic', 'underline'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                ['link'],
+                ['clean']
+              ]
+            },
+            placeholder: 'Type your response here...'
+          });
+          
+          // Store Quill instance on the element
+          editorEl.quill = quill;
+        });
+      }
+      
+      // Update completion date based on start date and duration
+      function updateCompletionDate() {
+        const startDate = new Date(document.getElementById('start-date').value);
+        const duration = parseInt(document.getElementById('duration').value) || 0;
+        
+        if (startDate && !isNaN(startDate.getTime()) && duration > 0) {
+          const completionDate = new Date(startDate);
+          completionDate.setDate(completionDate.getDate() + (duration * 7)); // Convert weeks to days
+          
+          document.getElementById('completion-date').value = completionDate.toISOString().split('T')[0];
+        }
+      }
+      
+      // Calculate total price
+      function calculateTotal() {
+        let subtotal = 0;
+        
+        document.querySelectorAll('.pricing-item').forEach(row => {
+          const quantity = parseFloat(row.querySelector('.item-quantity').value) || 0;
+          const unitPrice = parseFloat(row.querySelector('.item-unit-price').value) || 0;
+          const total = quantity * unitPrice;
+          
+          row.querySelector('.item-total').textContent = formatCurrency(total);
+          subtotal += total;
+        });
+        
+        const taxRate = 0.1; // 10% tax rate - this could be configurable
+        const taxes = subtotal * taxRate;
+        const total = subtotal + taxes;
+        
+        document.getElementById('subtotal').textContent = formatCurrency(subtotal);
+        document.getElementById('taxes').textContent = formatCurrency(taxes);
+        document.getElementById('total').textContent = formatCurrency(total);
+        
+        return total;
+      }
+      
+      // Format currency
+      function formatCurrency(amount) {
+        return new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD',
+          minimumFractionDigits: 2
+        }).format(amount);
+      }
+      
+      // Show error message
+      function showError(message) {
+        // In a real app, you would use a toast or alert component
+        alert(`Error: ${message}`);
+      }
+      
+      // Show success message
+      function showSuccess(message) {
+        // In a real app, you would use a toast or alert component
+        alert(`Success: ${message}`);
+      }
+      
+      // Update credit balance display
+      function updateCreditBalance(credits) {
+        document.getElementById('credit-balance').textContent = credits.toLocaleString();
+      }
+      
+      // Initialize event listeners
+      function initEventListeners() {
+        // Update completion date when start date or duration changes
+        document.getElementById('start-date').addEventListener('change', updateCompletionDate);
+        document.getElementById('duration').addEventListener('input', updateCompletionDate);
+        
+        // Toggle custom payment terms
+        document.getElementById('payment-terms').addEventListener('change', function() {
+          const customTermsContainer = document.getElementById('custom-terms-container');
+          customTermsContainer.style.display = this.value === 'custom' ? 'block' : 'none';
+        });
+        
+        // NDA acceptance
+        document.getElementById('nda-acceptance').addEventListener('change', function() {
+          document.getElementById('accept-nda').disabled = !this.checked;
+        });
+        
+        // Accept NDA
+        document.getElementById('accept-nda').addEventListener('click', function() {
+          document.getElementById('nda-agreement').checked = true;
+          ndaModal.hide();
+        });
+        
+        // File upload handling
+        const fileUploadArea = document.getElementById('file-upload-area');
+        const fileInput = document.getElementById('file-input');
+        
+        fileUploadArea.addEventListener('click', () => fileInput.click());
+        
+        fileUploadArea.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          fileUploadArea.classList.add('border-primary');
+          fileUploadArea.style.backgroundColor = '#f8f9ff';
+        });
+        
+        fileUploadArea.addEventListener('dragleave', () => {
+          fileUploadArea.classList.remove('border-primary');
+          fileUploadArea.style.backgroundColor = '';
+        });
+        
+        fileUploadArea.addEventListener('drop', (e) => {
+          e.preventDefault();
+          fileUploadArea.classList.remove('border-primary');
+          fileUploadArea.style.backgroundColor = '';
+          
+          if (e.dataTransfer.files.length > 0) {
+            handleFiles(e.dataTransfer.files);
+          }
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+          if (e.target.files.length > 0) {
+            handleFiles(e.target.files);
+            // Reset the input to allow selecting the same file again if needed
+            fileInput.value = '';
+          }
+        });
+        
+        // Pricing table
+        document.getElementById('add-pricing-item').addEventListener('click', function(e) {
+          e.preventDefault();
+          const itemId = Date.now();
+          const newRow = `
+            <tr class="pricing-item" data-id="${itemId}">
+              <td>
+                <input type="text" class="form-control form-control-sm item-name" placeholder="Item name" required>
+              </td>
+              <td>
+                <input type="text" class="form-control form-control-sm item-description" placeholder="Description">
+              </td>
+              <td style="width: 120px;">
+                <input type="number" class="form-control form-control-sm item-quantity" min="0" step="1" value="1" required>
+              </td>
+              <td style="width: 150px;">
+                <div class="input-group input-group-sm">
+                  <span class="input-group-text">$</span>
+                  <input type="number" class="form-control item-unit-price" min="0" step="0.01" required>
+                </div>
+              </td>
+              <td style="width: 150px;" class="item-total">$0.00</td>
+              <td style="width: 50px;" class="text-center">
+                <button type="button" class="btn btn-sm btn-outline-danger remove-pricing-item">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </td>
+            </tr>
+          `;
+          
+          const tbody = document.getElementById('pricing-items');
+          tbody.insertAdjacentHTML('beforeend', newRow);
+          
+          // Add event listeners to the new row
+          const newRowElement = tbody.querySelector(`[data-id="${itemId}"]`);
+          newRowElement.querySelector('.item-quantity').addEventListener('input', calculateTotal);
+          newRowElement.querySelector('.item-unit-price').addEventListener('input', calculateTotal);
+          newRowElement.querySelector('.remove-pricing-item').addEventListener('click', function() {
+            this.closest('tr').remove();
+            calculateTotal();
+          });
+          
+          // Focus on the item name field
+          newRowElement.querySelector('.item-name').focus();
+        });
+        
+        // Save draft
+        document.getElementById('save-draft-btn').addEventListener('click', function(e) {
+          e.preventDefault();
+          saveDraft();
+        });
+        
+        // Preview response
+        document.getElementById('preview-btn').addEventListener('click', function(e) {
+          e.preventDefault();
+          previewResponse();
+        });
+        
+        // Form submission
+        document.getElementById('response-form').addEventListener('submit', function(e) {
+          e.preventDefault();
+          submitResponse();
+        });
+        
+        // Confirm submission from preview
+        document.getElementById('confirm-submit').addEventListener('click', function() {
+          previewModal.hide();
+          submitResponse();
+        });
+      }
+      
+      // Handle file uploads
+      function handleFiles(files) {
+        const maxSize = 10 * 1024 * 1024; // 10MB
+        const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'image/jpeg', 'image/png'];
+        
+        for (const file of files) {
+          // Check file size
+          if (file.size > maxSize) {
+            showError(`File '${file.name}' exceeds the maximum size of 10MB`);
+            continue;
+          }
+          
+          // Check file type
+          if (!allowedTypes.includes(file.type)) {
+            showError(`File type '${file.type}' is not supported`);
+            continue;
+          }
+          
+          // Add to uploaded files
+          if (!uploadedFiles.some(f => f.name === file.name && f.size === file.size)) {
+            uploadedFiles.push(file);
+            renderFilePreview(file);
+          }
+        }
+      }
+      
+      // Render file preview
+      function renderFilePreview(file) {
+        const previews = document.getElementById('file-previews');
+        const fileId = `file-${Date.now()}`;
+        
+        const preview = document.createElement('div');
+        preview.className = 'file-item';
+        preview.id = fileId;
+        
+        // Get file icon based on type
+        let icon = 'bi-file-earmark';
+        if (file.type.includes('pdf')) icon = 'bi-file-earmark-pdf';
+        else if (file.type.includes('word')) icon = 'bi-file-earmark-word';
+        else if (file.type.includes('excel') || file.type.includes('spreadsheet')) icon = 'bi-file-earmark-excel';
+        else if (file.type.includes('image')) icon = 'bi-file-earmark-image';
+        
+        preview.innerHTML = `
+          <div class="file-info">
+            <i class="bi ${icon}"></i>
+            <span class="file-name">${file.name}</span>
+            <span class="text-muted small">(${(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+          </div>
+          <div class="file-actions">
+            <button type="button" class="btn btn-sm btn-outline-secondary preview-file" data-file-id="${fileId}">
+              <i class="bi bi-eye"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-danger remove-file" data-file-id="${fileId}">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+        `;
+        
+        previews.appendChild(preview);
+        
+        // Add event listeners
+        preview.querySelector('.remove-file').addEventListener('click', function() {
+          uploadedFiles = uploadedFiles.filter(f => f !== file);
+          preview.remove();
+        });
+        
+        // Preview functionality would be implemented here
+        preview.querySelector('.preview-file').addEventListener('click', function() {
+          // In a real app, this would open a preview modal
+          alert(`Previewing file: ${file.name}`);
+        });
+      }
+      
+      // Save draft
+      async function saveDraft() {
+        try {
+          const formData = collectFormData();
+          
+          // In a real app, this would save to the server
+          localStorage.setItem(`draft_rfx_${rfxData.id}`, JSON.stringify({
+            formData,
+            lastSaved: new Date().toISOString()
+          }));
+          
+          showSuccess('Draft saved successfully');
+          
+        } catch (error) {
+          console.error('Failed to save draft:', error);
+          showError('Failed to save draft. Please try again.');
+        }
+      }
+      
+      // Preview response
+      async function previewResponse() {
+        if (!validateForm()) return;
+        
+        const formData = collectFormData();
+        const previewContent = document.getElementById('preview-content');
+        
+        // Generate preview HTML
+        let html = `
+          <div class="container">
+            <div class="text-center mb-4">
+              <h2>${rfxData.title}</h2>
+              <h4 class="text-muted">Vendor Response</h4>
+              <hr class="my-4">
+            </div>
+            
+            <div class="row mb-4">
+              <div class="col-md-6">
+                <h5>Company Information</h5>
+                <p class="mb-1"><strong>Company:</strong> ${formData.companyName}</p>
+                <p class="mb-1"><strong>Contact:</strong> ${formData.contactName}</p>
+                <p class="mb-1"><strong>Email:</strong> ${formData.email}</p>
+                <p class="mb-1"><strong>Phone:</strong> ${formData.phone || 'N/A'}</p>
+              </div>
+              <div class="col-md-6">
+                <h5>Proposal Details</h5>
+                <p class="mb-1"><strong>Proposed Start:</strong> ${formData.startDate}</p>
+                <p class="mb-1"><strong>Duration:</strong> ${formData.duration} weeks</p>
+                <p class="mb-1"><strong>Completion:</strong> ${formData.completionDate}</p>
+                <p class="mb-1"><strong>Payment Terms:</strong> ${formData.paymentTerms === 'custom' ? formData.customTerms : formData.paymentTerms}</p>
+              </div>
+            </div>
+            
+            <div class="mb-4">
+              <h5>Company Overview</h5>
+              <div class="border rounded p-3 bg-light">
+                ${formData.companyOverview || '<p class="text-muted">No company overview provided.</p>'}
+              </div>
+            </div>
+            
+            <div class="mb-4">
+              <h5>Pricing</h5>
+              <div class="table-responsive">
+                <table class="table table-bordered">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Item</th>
+                      <th>Description</th>
+                      <th>Qty</th>
+                      <th>Unit Price</th>
+                      <th>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+        `;
+        
+        // Add pricing items
+        formData.pricingItems.forEach(item => {
+          html += `
+            <tr>
+              <td>${item.name || 'Unnamed Item'}</td>
+              <td>${item.description || '-'}</td>
+              <td>${item.quantity}</td>
+              <td>${formatCurrency(item.unitPrice)}</td>
+              <td>${formatCurrency(item.quantity * item.unitPrice)}</td>
+            </tr>
+          `;
+        });
+        
+        // Add totals
+        const subtotal = formData.pricingItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+        const tax = subtotal * 0.1; // 10% tax
+        const total = subtotal + tax;
+        
+        html += `
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colspan="4" class="text-end"><strong>Subtotal:</strong></td>
+                      <td>${formatCurrency(subtotal)}</td>
+                    </tr>
+                    <tr>
+                      <td colspan="4" class="text-end"><strong>Tax (10%):</strong></td>
+                      <td>${formatCurrency(tax)}</td>
+                    </tr>
+                    <tr class="table-active">
+                      <td colspan="4" class="text-end"><strong>Total:</strong></td>
+                      <td><strong>${formatCurrency(total)}</strong></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              ${formData.pricingNotes ? `<p class="mt-2"><strong>Notes:</strong> ${formData.pricingNotes}</p>` : ''}
+            </div>
+        `;
+        
+        // Add requirements responses
+        if (formData.requirements && formData.requirements.length > 0) {
+          html += '<div class="mb-4"><h5>Requirements</h5>';
+          
+          formData.requirements.forEach((req, index) => {
+            if (!req.response) return;
+            
+            html += `
+              <div class="card mb-3">
+                <div class="card-header">
+                  <h6 class="mb-0">${req.text}</h6>
+                </div>
+                <div class="card-body">
+            `;
+            
+            if (req.type === 'file' && req.files && req.files.length > 0) {
+              html += '<p>Attached files:</p><ul>';
+              req.files.forEach(file => {
+                html += `<li>${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)</li>`;
+              });
+              html += '</ul>';
+            } else {
+              html += `<div>${req.response || '<span class="text-muted">No response provided</span>'}</div>`;
+            }
+            
+            html += '
+                </div>
+              </div>
+            ';
+          });
+          
+          html += '</div>';
+        }
+        
+        // Add timeline notes if provided
+        if (formData.timelineNotes) {
+          html += `
+            <div class="mb-4">
+              <h5>Timeline Notes</h5>
+              <div class="border rounded p-3 bg-light">
+                ${formData.timelineNotes}
+              </div>
+            </div>
+          `;
+        }
+        
+        // Add attachments if any
+        if (formData.attachments && formData.attachments.length > 0) {
+          html += `
+            <div class="mb-4">
+              <h5>Attachments</h5>
+              <ul class="list-group">
+          `;
+          
+          formData.attachments.forEach(file => {
+            html += `
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                  <i class="bi bi-paperclip me-2"></i>
+                  ${file.name}
+                  <span class="text-muted small ms-2">(${(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+                </div>
+              </li>
+            `;
+          });
+          
+          html += '
+              </ul>
+            </div>
+          ';
+        }
+        
+        // Add submission notes
+        html += `
+          <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> This is a preview of your response. Please review all information carefully before submitting.
+            ${formData.ndaAgreed ? '<div class="mt-2"><i class="bi bi-shield-check text-success"></i> NDA Accepted</div>' : ''}
+          </div>
+          
+          <div class="text-end">
+            <button type="button" class="btn btn-outline-secondary me-2" data-bs-dismiss="modal">
+              <i class="bi bi-arrow-left"></i> Back to Edit
+            </button>
+            <button type="button" class="btn btn-success" id="confirm-submit">
+              <i class="bi bi-check-lg"></i> Submit Response
+            </button>
+          </div>
+        </div>
+        `;
+        
+        previewContent.innerHTML = html;
+        previewModal.show();
+      }
+      
+      // Collect form data
+      function collectFormData() {
+        const formData = {
+          // Company information
+          companyName: document.getElementById('company-name').value,
+          contactName: document.getElementById('contact-name').value,
+          email: document.getElementById('email').value,
+          phone: document.getElementById('phone').value,
+          companyOverview: quill.root.innerHTML,
+          
+          // Timeline
+          startDate: document.getElementById('start-date').value,
+          duration: document.getElementById('duration').value,
+          completionDate: document.getElementById('completion-date').value,
+          timelineNotes: document.getElementById('timeline-notes').value,
+          
+          // Pricing
+          paymentTerms: document.getElementById('payment-terms').value,
+          customTerms: document.getElementById('custom-terms').value,
+          pricingNotes: document.getElementById('pricing-notes').value,
+          pricingItems: [],
+          
+          // Requirements
+          requirements: [],
+          
+          // Attachments
+          attachments: [...uploadedFiles],
+          
+          // Terms
+          termsAgreed: document.getElementById('terms-agreement').checked,
+          ndaAgreed: document.getElementById('nda-agreement').checked,
+          
+          // Metadata
+          submittedAt: new Date().toISOString(),
+          rfxId: rfxData?.id
+        };
+        
+        // Collect pricing items
+        document.querySelectorAll('.pricing-item').forEach(row => {
+          formData.pricingItems.push({
+            name: row.querySelector('.item-name').value,
+            description: row.querySelector('.item-description').value,
+            quantity: parseFloat(row.querySelector('.item-quantity').value) || 0,
+            unitPrice: parseFloat(row.querySelector('.item-unit-price').value) || 0
+          });
+        });
+        
+        // Collect requirements responses
+        document.querySelectorAll('.requirement-card').forEach((card, index) => {
+          const reqId = card.id.replace('-card', '');
+          const reqInput = card.querySelector('input, textarea, [contenteditable]');
+          const requirement = {
+            id: reqId,
+            text: card.querySelector('.card-header h3')?.textContent.trim() || `Requirement ${index + 1}`,
+            type: card.querySelector('.card-header .badge-info')?.textContent.trim() || 'text',
+            response: ''
+          };
+          
+          if (requirement.type === 'file') {
+            // Handle file uploads for file requirements
+            const fileInput = card.querySelector('input[type="file"]');
+            if (fileInput && fileInput.files.length > 0) {
+              requirement.files = Array.from(fileInput.files);
+              requirement.response = `${fileInput.files.length} file(s) attached`;
+            }
+          } else if (requirement.type === 'checkbox') {
+            // Handle radio button groups for checkboxes
+            const selected = card.querySelector('input[type="radio"]:checked');
+            requirement.response = selected ? selected.value : '';
+          } else if (reqInput) {
+            // Handle text inputs, textareas, and rich text editors
+            if (reqInput.classList.contains('quill-editor')) {
+              requirement.response = reqInput.querySelector('.ql-editor').innerHTML;
+            } else {
+              requirement.response = reqInput.value;
+            }
+          }
+          
+          formData.requirements.push(requirement);
+        });
+        
+        return formData;
+      }
+      
+      // Validate form
+      function validateForm() {
+        // Basic validation
+        if (!document.getElementById('company-name').value.trim()) {
+          showError('Please enter your company name');
+          return false;
+        }
+        
+        if (!document.getElementById('contact-name').value.trim()) {
+          showError('Please enter a contact name');
+          return false;
+        }
+        
+        if (!document.getElementById('email').value.trim()) {
+          showError('Please enter your email address');
+          return false;
+        }
+        
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(document.getElementById('email').value.trim())) {
+          showError('Please enter a valid email address');
+          return false;
+        }
+        
+        // Check if at least one pricing item is added
+        if (document.querySelectorAll('.pricing-item').length === 0) {
+          showError('Please add at least one pricing item');
+          return false;
+        }
+        
+        // Validate pricing items
+        let hasInvalidPricing = false;
+        document.querySelectorAll('.pricing-item').forEach(row => {
+          if (!row.querySelector('.item-name').value.trim()) {
+            showError('Please enter a name for all pricing items');
+            hasInvalidPricing = true;
+            return false;
+          }
+          
+          const quantity = parseFloat(row.querySelector('.item-quantity').value) || 0;
+          if (quantity <= 0) {
+            showError('Quantity must be greater than 0');
+            hasInvalidPricing = true;
+            return false;
+          }
+          
+          const unitPrice = parseFloat(row.querySelector('.item-unit-price').value) || 0;
+          if (unitPrice < 0) {
+            showError('Unit price cannot be negative');
+            hasInvalidPricing = true;
+            return false;
+          }
+        });
+        
+        if (hasInvalidPricing) return false;
+        
+        // Check if terms are agreed
+        if (!document.getElementById('terms-agreement').checked) {
+          showError('You must agree to the terms and conditions');
+          return false;
+        }
+        
+        // Check if NDA is required and agreed
+        if (rfxData?.requiresNDA && !document.getElementById('nda-agreement').checked) {
+          showError('You must agree to the Non-Disclosure Agreement');
+          return false;
+        }
+        
+        return true;
+      }
+      
+      // Submit response
+      async function submitResponse() {
+        if (!validateForm()) return;
+        
+        try {
+          const submitButton = document.getElementById('submit-btn');
+          const originalText = submitButton.innerHTML;
+          submitButton.disabled = true;
+          submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Submitting...';
+          
+          const formData = collectFormData();
+          
+          // In a real app, this would submit to the server
+          console.log('Submitting response:', formData);
+          
+          // Simulate API call
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          
+          // Show success message
+          document.getElementById('response-id').textContent = `RES-${Math.floor(100000 + Math.random() * 900000)}`;
+          document.getElementById('submission-date').textContent = new Date().toLocaleString();
+          
+          // Clear draft if exists
+          if (rfxData?.id) {
+            localStorage.removeItem(`draft_rfx_${rfxData.id}`);
+          }
+          
+          // Show success modal
+          successModal.show();
+          
+        } catch (error) {
+          console.error('Failed to submit response:', error);
+          showError('Failed to submit response. Please try again.');
+          
+          // Re-enable submit button
+          const submitButton = document.getElementById('submit-btn');
+          submitButton.disabled = false;
+          submitButton.innerHTML = originalText;
+        }
+      }
+      
+      // Initialize the application
+      async function init() {
+        await checkAuth();
+        initEventListeners();
+        
+        // Load draft if exists
+        const urlParams = new URLSearchParams(window.location.search);
+        const rfxId = urlParams.get('id');
+        
+        if (rfxId) {
+          const draft = localStorage.getItem(`draft_rfx_${rfxId}`);
+          if (draft) {
+            try {
+              const draftData = JSON.parse(draft);
+              if (confirm('You have a saved draft. Would you like to load it?')) {
+                loadDraftData(draftData.formData);
+              }
+            } catch (e) {
+              console.error('Failed to load draft:', e);
+            }
+          }
+        }
+      }
+      
+      // Load draft data into form
+      function loadDraftData(draftData) {
+        if (!draftData) return;
+        
+        // Company information
+        if (draftData.companyName) document.getElementById('company-name').value = draftData.companyName;
+        if (draftData.contactName) document.getElementById('contact-name').value = draftData.contactName;
+        if (draftData.email) document.getElementById('email').value = draftData.email;
+        if (draftData.phone) document.getElementById('phone').value = draftData.phone;
+        if (draftData.companyOverview) quill.root.innerHTML = draftData.companyOverview;
+        
+        // Timeline
+        if (draftData.startDate) document.getElementById('start-date').value = draftData.startDate;
+        if (draftData.duration) document.getElementById('duration').value = draftData.duration;
+        if (draftData.timelineNotes) document.getElementById('timeline-notes').value = draftData.timelineNotes;
+        
+        // Pricing
+        if (draftData.paymentTerms) document.getElementById('payment-terms').value = draftData.paymentTerms;
+        if (draftData.customTerms) {
+          document.getElementById('custom-terms').value = draftData.customTerms;
+          if (draftData.paymentTerms === 'custom') {
+            document.getElementById('custom-terms-container').style.display = 'block';
+          }
+        }
+        if (draftData.pricingNotes) document.getElementById('pricing-notes').value = draftData.pricingNotes;
+        
+        // Load pricing items
+        if (draftData.pricingItems && draftData.pricingItems.length > 0) {
+          // Clear any existing items except the "Add" button row
+          document.querySelectorAll('.pricing-item').forEach(row => row.remove());
+          
+          // Add items from draft
+          draftData.pricingItems.forEach(item => {
+            const itemId = Date.now();
+            const newRow = `
+              <tr class="pricing-item" data-id="${itemId}">
+                <td>
+                  <input type="text" class="form-control form-control-sm item-name" value="${escapeHtml(item.name || '')}" placeholder="Item name" required>
+                </td>
+                <td>
+                  <input type="text" class="form-control form-control-sm item-description" value="${escapeHtml(item.description || '')}" placeholder="Description">
+                </td>
+                <td style="width: 120px;">
+                  <input type="number" class="form-control form-control-sm item-quantity" min="0" step="1" value="${item.quantity || 1}" required>
+                </td>
+                <td style="width: 150px;">
+                  <div class="input-group input-group-sm">
+                    <span class="input-group-text">$</span>
+                    <input type="number" class="form-control item-unit-price" min="0" step="0.01" value="${item.unitPrice || 0}" required>
+                  </div>
+                </td>
+                <td style="width: 150px;" class="item-total">${formatCurrency((item.quantity || 0) * (item.unitPrice || 0))}</td>
+                <td style="width: 50px;" class="text-center">
+                  <button type="button" class="btn btn-sm btn-outline-danger remove-pricing-item">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </td>
+              </tr>
+            `;
+            
+            const tbody = document.getElementById('pricing-items');
+            tbody.insertAdjacentHTML('beforeend', newRow);
+            
+            // Add event listeners to the new row
+            const newRowElement = tbody.querySelector(`[data-id="${itemId}"]`);
+            newRowElement.querySelector('.item-quantity').addEventListener('input', calculateTotal);
+            newRowElement.querySelector('.item-unit-price').addEventListener('input', calculateTotal);
+            newRowElement.querySelector('.remove-pricing-item').addEventListener('click', function() {
+              this.closest('tr').remove();
+              calculateTotal();
+            });
+          });
+          
+          // Recalculate totals
+          calculateTotal();
+        }
+        
+        // Load requirements responses
+        if (draftData.requirements && draftData.requirements.length > 0) {
+          draftData.requirements.forEach(req => {
+            const reqElement = document.getElementById(`${req.id}-card`);
+            if (!reqElement) return;
+            
+            const reqInput = reqElement.querySelector('input, textarea, [contenteditable]');
+            if (!reqInput) return;
+            
+            if (req.type === 'file') {
+              // Handle file uploads - in a real app, we'd need to handle file uploads differently
+              const filePreview = document.getElementById(`${req.id}-preview`);
+              if (filePreview && req.files && req.files.length > 0) {
+                filePreview.innerHTML = `
+                  <div class="alert alert-info p-2 small">
+                    <i class="bi bi-info-circle"></i> ${req.files.length} file(s) were previously uploaded. Please re-upload them if needed.
+                  </div>
+                `;
+              }
+            } else if (reqInput.classList.contains('quill-editor')) {
+              // Handle rich text editors
+              reqInput.querySelector('.ql-editor').innerHTML = req.response || '';
+            } else {
+              // Handle regular inputs
+              reqInput.value = req.response || '';
+            }
+          });
+        }
+        
+        // Load attachments
+        if (draftData.attachments && draftData.attachments.length > 0) {
+          // In a real app, we'd need to handle file uploads differently
+          const filePreviews = document.getElementById('file-previews');
+          if (filePreviews) {
+            filePreviews.innerHTML = `
+              <div class="alert alert-info p-2 small">
+                <i class="bi bi-info-circle"></i> ${draftData.attachments.length} file(s) were previously uploaded. Please re-upload them if needed.
+              </div>
+            `;
+          }
+        }
+        
+        // Load terms
+        if (draftData.termsAgreed) document.getElementById('terms-agreement').checked = true;
+        if (draftData.ndaAgreed) document.getElementById('nda-agreement').checked = true;
+        
+        showSuccess('Draft loaded successfully');
+      }
+      
+      // Helper function to escape HTML
+      function escapeHtml(unsafe) {
+        if (!unsafe) return '';
+        return unsafe
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+      
+      // Start the application
+      init();
+    });
+  </script>
+</body>
+</html>

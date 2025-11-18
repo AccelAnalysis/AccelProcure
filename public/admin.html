@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - AccelRFx</title>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
+    <link href="https://unpkg.com/deck.gl@latest/dist/umd/deck.gl.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/src/styles/main.css">
+    <style>
+        .admin-container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            min-height: 100vh;
+            background-color: #f5f7fa;
+        }
+        
+        .sidebar {
+            background: #2c3e50;
+            color: white;
+            padding: 2rem 1rem;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+        
+        .sidebar-header {
+            padding: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .nav-item {
+            padding: 0.75rem 1rem;
+            margin: 0.5rem 0;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .nav-item:hover, .nav-item.active {
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .main-content {
+            padding: 2rem;
+            overflow-y: auto;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .metric-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 0.5rem 0;
+            color: #2c3e50;
+        }
+        
+        .metric-label {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+        
+        .responses-table {
+            width: 100%;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-approved {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-rejected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+        
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Sidebar Navigation -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>Admin Panel</h2>
+            </div>
+            <nav>
+                <div class="nav-item active">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </div>
+                <div class="nav-item">
+                    <i class="fas fa-users"></i> Users
+                </div>
+                <div class="nav-item">
+                    <i class="fas fa-file-contract"></i> RFx Management
+                </div>
+                <div class="nav-item">
+                    <i class="fas fa-chart-line"></i> Analytics
+                </div>
+                <div class="nav-item">
+                    <i class="fas fa-cog"></i> Settings
+                </div>
+                <div class="nav-item" id="logoutBtn">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </div>
+            </nav>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+            <h1>Admin Dashboard</h1>
+            
+            <!-- Metrics Overview -->
+            <section>
+                <h2>Platform Overview</h2>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Total RFx Posted</div>
+                        <div class="metric-value" id="totalRfx">0</div>
+                        <div class="metric-trend up">+12% from last month</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Active Users</div>
+                        <div class="metric-value" id="activeUsers">0</div>
+                        <div class="metric-trend up">+5% from last week</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Avg. Response Time</div>
+                        <div class="metric-value" id="avgResponseTime">0h</div>
+                        <div class="metric-trend down">-2h from last month</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">AI Matches Made</div>
+                        <div class="metric-value" id="aiMatches">0</div>
+                        <div class="metric-trend up">+23% from last week</div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Recent RFx Responses -->
+            <section>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin: 2rem 0 1rem 0;">
+                    <h2>Recent RFx Responses</h2>
+                    <button class="btn btn-primary" id="exportData">
+                        <i class="fas fa-download"></i> Export Data
+                    </button>
+                </div>
+                <div class="responses-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>RFx ID</th>
+                                <th>Title</th>
+                                <th>Vendor</th>
+                                <th>Submitted</th>
+                                <th>AI Confidence</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="responsesTableBody">
+                            <!-- Filled dynamically via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            
+            <!-- AI Performance Metrics -->
+            <section style="margin-top: 3rem;">
+                <h2>AI Matching Performance</h2>
+                <div class="metrics-grid" style="grid-template-columns: 1fr 1fr;">
+                    <div class="metric-card">
+                        <h3>Match Accuracy</h3>
+                        <div id="matchAccuracyChart" style="height: 200px;">
+                            <!-- Chart will be rendered here -->
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <h3>Response Quality</h3>
+                        <div id="responseQualityChart" style="height: 200px;">
+                            <!-- Chart will be rendered here -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="/src/services/authService.js"></script>
+    <script src="/src/services/adminService.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Check authentication
+            const currentUser = await authService.getCurrentUser();
+            if (!currentUser || !currentUser.isAdmin) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            // Load dashboard data
+            loadDashboardData();
+            loadRecentResponses();
+            
+            // Set up event listeners
+            document.getElementById('logoutBtn').addEventListener('click', () => {
+                authService.logout();
+                window.location.href = '/login.html';
+            });
+            
+            document.getElementById('exportData').addEventListener('click', exportData);
+        });
+        
+        async function loadDashboardData() {
+            try {
+                const response = await axios.get('/api/admin/metrics');
+                const data = response.data;
+                
+                // Update metrics
+                document.getElementById('totalRfx').textContent = data.totalRfx.toLocaleString();
+                document.getElementById('activeUsers').textContent = data.activeUsers.toLocaleString();
+                document.getElementById('avgResponseTime').textContent = `${data.avgResponseTime}h`;
+                document.getElementById('aiMatches').textContent = data.aiMatches.toLocaleString();
+                
+                // Render charts
+                renderCharts(data.chartData);
+                
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+                alert('Failed to load dashboard data. Please try again.');
+            }
+        }
+        
+        async function loadRecentResponses() {
+            try {
+                const response = await axios.get('/api/admin/recent-responses');
+                const responses = response.data;
+                const tableBody = document.getElementById('responsesTableBody');
+                
+                tableBody.innerHTML = responses.map(response => `
+                    <tr>
+                        <td>${response.rfxId}</td>
+                        <td>${response.title}</td>
+                        <td>${response.vendor}</td>
+                        <td>${new Date(response.submittedAt).toLocaleDateString()}</td>
+                        <td>
+                            <div class="progress" style="background: #e9ecef; height: 6px; border-radius: 3px; width: 100px; margin: 5px 0;">
+                                <div class="progress-bar" style="background: #28a745; height: 100%; width: ${response.aiConfidence}%; border-radius: 3px;"></div>
+                            </div>
+                            ${response.aiConfidence}%
+                        </td>
+                        <td>
+                            <span class="status-badge status-${response.status.toLowerCase()}">
+                                ${response.status}
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick="viewResponse('${response.id}')">
+                                <i class="fas fa-eye"></i> View
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Error loading recent responses:', error);
+                alert('Failed to load recent responses. Please try again.');
+            }
+        }
+        
+        function renderCharts(chartData) {
+            // Match Accuracy Chart
+            const matchCtx = document.getElementById('matchAccuracyChart').getContext('2d');
+            new Chart(matchCtx, {
+                type: 'line',
+                data: {
+                    labels: chartData.months,
+                    datasets: [{
+                        label: 'Match Accuracy',
+                        data: chartData.accuracy,
+                        borderColor: '#3498db',
+                        tension: 0.3,
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Response Quality Chart
+            const qualityCtx = document.getElementById('responseQualityChart').getContext('2d');
+            new Chart(qualityCtx, {
+                type: 'bar',
+                data: {
+                    labels: chartData.qualityLabels,
+                    datasets: [{
+                        label: 'Response Quality',
+                        data: chartData.qualityData,
+                        backgroundColor: [
+                            '#e74c3c',
+                            '#f39c12',
+                            '#f1c40f',
+                            '#2ecc71',
+                            '#27ae60'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function viewResponse(responseId) {
+            // Navigate to response detail view
+            window.location.href = `/response-detail.html?id=${responseId}`;
+        }
+        
+        async function exportData() {
+            try {
+                const response = await axios.get('/api/admin/export-responses', {
+                    responseType: 'blob'
+                });
+                
+                const url = window.URL.createObjectURL(new Blob([response.data]));
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', `rfx-responses-${new Date().toISOString().split('T')[0]}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                
+            } catch (error) {
+                console.error('Error exporting data:', error);
+                alert('Failed to export data. Please try again.');
+            }
+        }
+    </script>
+</body>
+</html>

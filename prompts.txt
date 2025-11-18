@@ -1,0 +1,20 @@
+
+
+Use the file /Users/jonathanholman/Code Projects/AccelRFx_Production/Development Order.txt as a guide to understand where files are located. Write the code for Phase 7, step 1 only. Update existing files directly. Do not create any files or perform any other actions, simply carry out this part of the development phase. Do not use truncations - build out the full robust code for this phase and step. Write the code directly to the file according to this phase step. Do not print code in the chat. If the code would be printed in the chat for the response, just stop and print "try again."
+
+
+
+Use the file /Users/jonathanholman/Code Projects/AccelRFx_Production/AccelRFx_File_Structure.txt as a guide to understand where files are located, and use the file /Users/jonathanholman/Code Projects/AccelRFx_Production/Development Order.txt to reference Phase 6 development plan. Review the development plan and the referenced files with their assoicated code. Advise on the completeness, accuracy, correctness, etc. of the job of buidling out Phase 6.
+
+5.	src/services/mapService.js
+o	Fetch RFX + AI map layer data and merge into renderable JSON.
+
+Implement 
+forms.css
+ with form controls, validation states, and layout
+Add 
+dashboard.css
+ for dashboard-specific layouts and cards
+Complete 
+responsive.css
+ with breakpoints and responsive utilities

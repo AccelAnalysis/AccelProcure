@@ -1,0 +1,136 @@
+🔹 Phase 1 — Foundations & Environment Setup
+1.	.env.example
+o	Add placeholders for keys:
+MAPBOX_TOKEN, SUPABASE_URL, SUPABASE_KEY, OPENAI_API_KEY, FIREBASE_CONFIG, etc.
+2.	package.json
+o	Add baseline dependencies:
+o	npm install mapbox-gl deck.gl @supabase/supabase-js firebase openai dotenv
+Include vite, eslint, prettier, and nodemon for dev tooling.
+3.	vite.config.js
+o	Set up hot reload, alias paths (@/src), and env loading.
+4.	src/config/app.config.js
+o	Define constants: app name, API base URL, environment flags, credit cost constants.
+5.	src/config/mapbox.config.js
+o	Import token from .env.
+o	Set up Mapbox style, pitch, bearing, default zoom, exaggeration, etc.
+6.	src/config/auth.config.js
+o	Initialize Firebase or Supabase Auth (depending on your chosen provider).
+7.	src/config/ai.config.js
+o	Store AI model IDs and API base URLs (server-side only).
+✅ Milestone: Environment loads, builds cleanly, no runtime errors.
+
+
+🔹 Phase 2 — Backend & API Layer (Core Server Functions)
+These files establish your application logic boundaries and security.
+They must be done before frontend code begins fetching anything.
+1.	src/api/index.js
+o	Create a minimal Express or Supabase Edge Router skeleton with /api/health route.
+2.	src/api/auth/
+o	login.js, register.js, verifySession.js, resetPassword.js
+o	Hook into Firebase/Supabase Auth SDK.
+o	Return JWTs or access tokens.
+3.	src/api/profiles/
+o	getProfile.js, updateProfile.js, enrichProfile.js
+o	Implement enrichment using USAspending.gov and SCC APIs.
+4.	src/api/rfx/
+o	createRfx.js, getRfxList.js, getRfxById.js, respondToRfx.js
+o	Build CRUD endpoints tied to database (Supabase or Sheets).
+o	Add authentication middleware.
+5.	src/api/ai/
+o	generateProposal.js, generateResponse.js, suggestMatches.js
+o	Connect to OpenAI or Anthropic via .env key.
+o	Ensure sanitization and rate limiting.
+6.	src/api/map/
+o	getMapData.js, get3DTerrain.js, updateHeatmap.js
+o	Returns map layer data from your RFX and AI insights.
+✅ Milestone: All endpoints reachable (Postman test passes for each route).
+
+🔹 Phase 3 — Frontend Core Logic (Non-Visual)
+1.	src/services/authService.js
+o	Functions for login, logout, register, getCurrentUser.
+o	Centralize token storage (localStorage or Supabase session).
+2.	src/services/rfxService.js
+o	CRUD operations via /api/rfx/*.
+3.	src/services/profileService.js
+o	Retrieve, update, enrich profiles.
+4.	src/services/aiService.js
+o	Call backend /api/ai/* endpoints for AI generation and matching.
+5.	src/services/mapService.js
+o	Fetch RFX + AI map layer data and merge into renderable JSON.
+6.	src/services/storageService.js
+o	Handle file uploads (to Supabase or Firebase Storage).
+7.	src/services/creditService.js
+o	Manage balance retrieval and debit for each action.
+✅ Milestone: Backend and frontend communicate cleanly (console.log test OK for all services).
+
+🔹 Phase 4 — Core UI Logic and 3D Map Integration
+1.	src/scripts/shared.js
+o	Create global helpers: fetch wrappers, toasts, error modals, debounce.
+2.	src/scripts/app.js
+o	Initialize auth session, load navigation, call map initialization.
+3.	src/scripts/map3d.js
+o	Set up Mapbox GL JS map with terrain and 3D buildings.
+o	Load rfxService + mapService data.
+4.	src/scripts/map-ai.js
+o	Overlay deck.gl layers (heatmap, arc connections, confidence extrusions).
+5.	src/scripts/nav.js
+o	Drawer logic, menu toggles, notifications.
+6.	src/scripts/ai-assist.js
+o	Connect frontend editors (proposal, responses) to AI endpoints.
+7.	src/scripts/admin.js
+o	Admin dashboard logic (view responses, metrics).
+✅ Milestone: Map renders in 3D, AI overlays load dynamically with no console errors.
+
+🔹 Phase 5 — Pages & Forms
+1. public/index.html
+   - Main authenticated dashboard
+   - Loads app.js, map3d.js, map-ai.js, nav.js
+   - Includes Mapbox container <div id="map">, drawer, and top nav
+   - Connects navigation buttons to profile.html, proposal.html, responses.html
+
+2. public/login.html
+   - Simple login page, connects to authService.js
+
+3. public/profile.html
+   - Company setup + enrichment screen
+   - Pulls data from profileService.js
+
+4. public/proposal.html
+   - Proposal creation page with AI generation hooks
+
+5. public/responses.html
+   - Response submission page for responders
+
+6. public/admin.html
+   - Admin dashboard for viewing metrics and ranked responses
+✅ Milestone: All front-end pages render properly and load correct scripts.
+
+Phase 6 — Styles and Components
+1.	src/styles/theme.css
+o	Define global colors, typography, and shadows (Accel Analysis branding).
+2.	src/styles/styles.css
+o	Main layout and map container.
+3.	src/styles/map3d.css
+o	Styling for tilted 3D perspective, map overlays, depth shadows.
+4.	src/styles/forms.css
+o	Unified proposal/response form design.
+5.	src/components/
+o	Build and include partials (navbar.html, sidebar.html, modal.html).
+✅ Milestone: Visual consistency across modules.
+
+🔹 Phase 7 — AI & Analytics Refinement
+1.	src/api/ai/mapInsights.js
+o	Return AI-weighted cluster data for the map.
+2.	src/services/analyticsService.js
+o	Fetch analytics for admin dashboard (RFX counts, match accuracy, etc.).
+3.	src/scripts/map-ai.js (update)
+o	Add live AI-driven layer updates.
+4.	src/scripts/admin.js (update)
+o	Include AI summary and metrics.
+✅ Milestone: AI layers functional and adaptive — insights appear visually on map.
+
+
+
+
+
+

@@ -1,0 +1,55 @@
+<!-- Modal Container -->
+<div id="modal" class="modal" role="dialog" aria-modal="true" aria-hidden="true" tabindex="-1">
+  <div class="modal-overlay" data-modal-close></div>
+  
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <!-- Modal Header -->
+      <div class="modal-header">
+        <h3 class="modal-title">Modal Title</h3>
+        <button type="button" class="modal-close" data-modal-close aria-label="Close">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      
+      <!-- Modal Body -->
+      <div class="modal-body">
+        <p>Modal content goes here. You can add any HTML content.</p>
+      </div>
+      
+      <!-- Modal Footer -->
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-modal-close>Cancel</button>
+        <button type="button" class="btn btn-primary">Confirm</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Trigger Template -->
+<template id="modalTriggerTemplate">
+  <button type="button" class="btn btn-primary" data-modal-open data-modal-target="#modal">
+    Open Modal
+  </button>
+</template>
+
+<!-- Confirmation Modal Template -->
+<template id="confirmModalTemplate">
+  <div class="modal-confirm">
+    <div class="modal-icon">
+      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+      </svg>
+    </div>
+    <h3 class="modal-title">Confirm Action</h3>
+    <div class="modal-message">Are you sure you want to perform this action?</div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-outline" data-modal-close>Cancel</button>
+      <button type="button" class="btn btn-danger" data-confirm>Confirm</button>
+    </div>
+  </div>
+</template>

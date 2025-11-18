@@ -1,0 +1,148 @@
+AccelRFx/
+│
+├── public/
+│   ├── index.html                     # Landing page (marketing, sign-in CTA)
+│   ├── app.html                       # Authenticated app shell (Mapbox 3D map + nav)
+│   ├── proposal.html                  # Proposal creation interface
+│   ├── responses.html                 # Response management portal
+│   ├── profile.html                   # Profile & company setup
+│   ├── admin.html                     # Platform super-admin dashboard
+│   ├── login.html                     # Auth screen
+│   ├── register.html                  # Registration / onboarding wizard
+│   ├── forgot-password.html
+│   ├── manifest.json                  # PWA metadata
+│   └── favicon.ico
+│
+├── assets/
+│   ├── logos/
+│   │   ├── accel_logo.png
+│   │   ├── accel_icon.svg
+│   │   └── favicon.ico
+│   ├── icons/
+│   │   ├── analytics.svg
+│   │   ├── rfpx.svg
+│   │   ├── responses.svg
+│   │   ├── search.svg
+│   │   ├── settings.svg
+│   │   ├── globe.svg                  # 3D map toggle icon
+│   │   └── user.svg
+│   ├── illustrations/
+│   └── uploads/                       # Temporary local uploads before cloud sync
+│
+├── src/
+│   ├── config/
+│   │   ├── app.config.js              # Global constants, URLs, feature flags
+│   │   ├── auth.config.js             # Auth provider (Firebase/Supabase)
+│   │   ├── ai.config.js               # AI model routing (OpenAI, Anthropic, etc.)
+│   │   └── mapbox.config.js           # Mapbox keys, style URLs, deck.gl params
+│   │
+│   ├── api/                           # Serverless / edge endpoints
+│   │   ├── index.js
+│   │   ├── auth/
+│   │   │   ├── login.js
+│   │   │   ├── register.js
+│   │   │   ├── resetPassword.js
+│   │   │   └── verifySession.js
+│   │   ├── profiles/
+│   │   │   ├── getProfile.js
+│   │   │   ├── updateProfile.js
+│   │   │   └── enrichProfile.js       # Pull from USAspending.gov / SCC / SAM.gov
+│   │   ├── rfx/
+│   │   │   ├── createRfx.js
+│   │   │   ├── getRfxList.js
+│   │   │   ├── getRfxById.js
+│   │   │   ├── matchResponders.js     # AI-assisted matching
+│   │   │   ├── evaluateResponses.js   # AI-assisted scoring / ranking
+│   │   │   └── respondToRfx.js
+│   │   ├── ai/
+│   │   │   ├── generateProposal.js    # AI draft generation
+│   │   │   ├── generateResponse.js    # AI response generation
+│   │   │   ├── suggestMatches.js      # Buyer–responder recommendations
+│   │   │   └── mapInsights.js         # AI-driven map clustering & scoring layer
+│   │   ├── map/
+│   │   │   ├── getMapData.js          # Fetch RFX + responder geodata
+│   │   │   ├── get3DTerrain.js        # Mapbox terrain/DEM integration
+│   │   │   └── updateHeatmap.js       # Dynamic heatmap updates via AI metrics
+│   │   ├── storage/
+│   │   │   ├── uploadDocument.js
+│   │   │   ├── getDocument.js
+│   │   │   └── deleteDocument.js
+│   │   └── admin/
+│   │       ├── getMetrics.js
+│   │       ├── manageAccounts.js
+│   │       └── updateSettings.js
+│   │
+│   ├── scripts/
+│   │   ├── app.js                     # Initializes Mapbox GL map + deck.gl overlay
+│   │   ├── map3d.js                   # Core Mapbox/Deck integration (terrain, tilt, layers)
+│   │   ├── map-ai.js                  # AI-enhanced visuals (arcs, heatmaps, scoring)
+│   │   ├── auth.js                    # Auth UI
+│   │   ├── profile.js                 # Profile editor + enrichment
+│   │   ├── proposal.js                # Proposal builder
+│   │   ├── responses.js               # Response management
+│   │   ├── ai-assist.js               # Text-based AI helpers (drafts, Q&A)
+│   │   ├── shared.js                  # Fetch wrappers, modals, toasts
+│   │   ├── credit.js                  # Credits / billing logic
+│   │   ├── nav.js                     # Sidebar, drawer, notifications
+│   │   ├── admin.js                   # Admin console controls
+│   │   └── utils/
+│   │       ├── debounce.js
+│   │       ├── validation.js
+│   │       ├── fileUtils.js
+│   │       └── mapUtils.js            # Replaces Leaflet helpers w/ Mapbox equivalents
+│   │
+│   ├── styles/
+│   │   ├── styles.css
+│   │   ├── theme.css
+│   │   ├── responsive.css
+│   │   ├── forms.css
+│   │   ├── dashboard.css
+│   │   └── map3d.css                  # 3D terrain + AI visualization styles (shadows, pitch)
+│   │
+│   ├── components/
+│   │   ├── sidebar.html
+│   │   ├── navbar.html
+│   │   ├── rfxCard.html
+│   │   ├── modal.html
+│   │   └── loader.html
+│   │
+│   └── services/
+│       ├── authService.js
+│       ├── storageService.js
+│       ├── aiService.js
+│       ├── mapService.js              # Fetch + render 3D map data layers
+│       ├── profileService.js
+│       ├── rfxService.js
+│       ├── creditService.js
+│       └── analyticsService.js        # Map + business intelligence reporting
+│
+├── backend/
+│   ├── Code.gs
+│   └── sheetSchema.gs
+│
+├── data/
+│   ├── schema/
+│   │   ├── RfxSchema.json
+│   │   ├── ResponseSchema.json
+│   │   ├── ProfileSchema.json
+│   │   ├── CreditLedgerSchema.json
+│   │   └── MapInsightsSchema.json     # AI-generated map insight data (clusters, scores)
+│   └── mock/
+│       ├── demoRfx.json
+│       └── demoProfiles.json
+│
+├── docs/
+│   ├── README.md
+│   ├── DEPLOYMENT.md
+│   ├── API_REFERENCE.md
+│   ├── AUTH_SYSTEM.md
+│   ├── AI_INTEGRATION.md
+│   ├── MAPBOX_3D_SETUP.md             # Mapbox + deck.gl configuration guide
+│   ├── SHEET_STRUCTURE.md
+│   └── DATA_ENRICHMENT.md
+│
+├── .env.example                       # Contains MAPBOX_TOKEN, OPENAI_KEY, etc.
+├── package.json
+├── vite.config.js
+├── appsscript.json
+└── .gitignore
