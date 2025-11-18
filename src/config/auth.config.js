@@ -1,92 +1,123 @@
 import { createClient } from '@supabase/supabase-js';
-import { env } from '../config/app.config';
+import { getApp, getApps, initializeApp } from 'firebase/app';
+import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 
-// Initialize Supabase client
-export const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+import { ENV_CONFIG } from './app.config';
 
-// Auth configuration
+export const supabaseUrl = ENV_CONFIG.SUPABASE_URL;
+export const supabaseAnonKey = ENV_CONFIG.SUPABASE_ANON_KEY;
+
+export const supabase =
+  supabaseUrl && supabaseAnonKey
+    ? createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          autoRefreshToken: true,
+          persistSession: true,
+          detectSessionInUrl: true,
+        },
+      })
+    : null;
+
+const firebaseConfig = ENV_CONFIG.FIREBASE;
+const hasFirebaseConfig = Object.values(firebaseConfig).some(Boolean);
+
+const firebaseApp = hasFirebaseConfig
+  ? getApps().length > 0
+    ? getApp()
+    : initializeApp(firebaseConfig)
+  : null;
+
+export const firebaseAuth = firebaseApp ? getAuth(firebaseApp) : null;
+export const firebaseProviders = {
+  google: firebaseAuth ? new GoogleAuthProvider() : null,
+};
+
 export const authConfig = {
-  // Auth providers
   providers: {
     email: true,
-    google: true,
-    github: false, // Enable if you want GitHub auth
+    google: Boolean(firebaseProviders.google),
+    github: false,
   },
-  
-  // Password reset options
   passwordReset: {
-    url: `${window.location.origin}/reset-password`,
+    url: typeof window !== 'undefined' ? `${window.location.origin}/reset-password` : '',
   },
-  
-  // Email confirmation options
   emailConfirmation: {
-    redirectTo: `${window.location.origin}/dashboard`,
+    redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/dashboard` : '',
   },
-  
-  // Session configuration
   session: {
     name: 'accelrfx-session',
-    lifetime: 60 * 60 * 24 * 7, // 7 days in seconds
+    lifetime: 60 * 60 * 24 * 7,
   },
 };
 
-// Helper functions
-export const signIn = async (email, password) => {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-  return { data, error };
+const requireSupabase = () => {
+  if (!supabase) {
+    throw new Error('Supabase client is not configured.');
+  }
+  return supabase;
 };
 
-export const signUp = async (email, password, userData) => {
-  const { data, error } = await supabase.auth.signUp({
+export const signIn = async (email, password) => {
+  const client = requireSupabase();
+  return client.auth.signInWithPassword({ email, password });
+};
+
+export const signUp = async (email, password, userData = {}) => {
+  const client = requireSupabase();
+  const fullName =
+    userData.fullName ||
+    [userData.firstName, userData.lastName].filter(Boolean).join(' ') ||
+    userData.first_name ||
+    '';
+  return client.auth.signUp({
     email,
     password,
     options: {
       data: {
-        full_name: userData?.fullName || '',
-        company: userData?.company || '',
+        full_name: fullName,
+        first_name: userData.firstName || userData.first_name || '',
+        last_name: userData.lastName || userData.last_name || '',
+        company: userData.company || '',
       },
     },
   });
-  return { data, error };
 };
 
 export const signOut = async () => {
-  const { error } = await supabase.auth.signOut();
-  return { error };
+  const client = requireSupabase();
+  return client.auth.signOut();
 };
 
 export const getCurrentUser = () => {
-  return supabase.auth.getUser();
+  const client = requireSupabase();
+  return client.auth.getUser();
 };
 
 export const onAuthStateChange = (callback) => {
-  return supabase.auth.onAuthStateChange((event, session) => {
-    callback(event, session);
+  const client = requireSupabase();
+  return client.auth.onAuthStateChange((event, session) => {
+    callback?.(event, session);
   });
 };
 
 export const resetPassword = async (email) => {
-  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${window.location.origin}/update-password`,
-  });
-  return { data, error };
+  const client = requireSupabase();
+  const redirectTo = typeof window !== 'undefined' ? `${window.location.origin}/update-password` : undefined;
+  return client.auth.resetPasswordForEmail(email, { redirectTo });
 };
 
 export const updatePassword = async (newPassword) => {
-  const { data, error } = await supabase.auth.updateUser({
-    password: newPassword,
-  });
-  return { data, error };
+  const client = requireSupabase();
+  return client.auth.updateUser({ password: newPassword });
 };
 
 export default {
   supabase,
+  supabaseUrl,
+  supabaseAnonKey,
+  firebaseApp,
+  firebaseAuth,
+  firebaseProviders,
   authConfig,
   signIn,
   signUp,
