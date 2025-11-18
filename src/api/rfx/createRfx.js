@@ -1,67 +1,40 @@
-import { supabase } from '../../config/supabase';
-import { authenticateRequest } from '../../middleware/auth';
+import { getSupabaseClient } from '../utils/supabaseClient.js';
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method not allowed' });
+export const createRfxHandler = async (req, res) => {
+  const supabase = getSupabaseClient();
+  const payload = {
+    title: req.body.title,
+    description: req.body.description,
+    submission_deadline: req.body.submission_deadline,
+    budget_range: req.body.budget_range,
+    requirements: req.body.requirements,
+    category: req.body.category,
+    location: req.body.location,
+    naics_codes: req.body.naics_codes || [],
+    status: req.body.status || 'draft',
+    created_by: req.user.id,
+  };
+
+  if (!payload.title || !payload.description || !payload.submission_deadline) {
+    return res.status(400).json({ error: 'Title, description, and submission_deadline are required' });
   }
 
   try {
-    // Authenticate the request
-    const { user, error: authError } = await authenticateRequest(req);
-    if (authError) {
-      return res.status(401).json({ error: authError });
-    }
-
-    const { 
-      title, 
-      description, 
-      deadline, 
-      budget_range,
-      requirements,
-      category,
-      location,
-      is_public = false
-    } = req.body;
-
-    // Validate required fields
-    if (!title || !description || !deadline || !requirements || !category) {
-      return res.status(400).json({ 
-        error: 'Missing required fields: title, description, deadline, requirements, and category are required' 
-      });
-    }
-
-    // Insert new RFX into database
-    const { data: newRfx, error } = await supabase
-      .from('rfxs')
-      .insert([
-        { 
-          title,
-          description,
-          deadline: new Date(deadline).toISOString(),
-          budget_range,
-          requirements,
-          category,
-          location,
-          is_public,
-          created_by: user.id,
-          status: 'draft'
-        }
-      ])
-      .select()
+    const { data, error } = await supabase
+      .from('rfx_opportunities')
+      .insert([{ ...payload, created_at: new Date().toISOString() }])
+      .select('*')
       .single();
 
     if (error) {
-      console.error('Error creating RFX:', error);
-      return res.status(500).json({ error: 'Failed to create RFX' });
+      return res.status(400).json({ error: 'Failed to create RFX', details: error.message });
     }
 
-    return res.status(201).json({
-      message: 'RFX created successfully',
-      data: newRfx
-    });
+    return res.status(201).json({ message: 'RFX created', rfx: data });
   } catch (error) {
-    console.error('Server error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error('Create RFX error:', error);
+    return res.status(500).json({ error: 'Unable to create RFX' });
   }
-}
+};
+
+export default createRfxHandler;
